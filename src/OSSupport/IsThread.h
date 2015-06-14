@@ -32,10 +32,6 @@ protected:
 	/** The overriden Execute() method should check this value periodically and terminate if this is true. */
 	volatile bool m_ShouldTerminate;
 
-private:
-	/** Wrapper for Execute() that waits for the initialization event, to prevent race conditions in thread initialization. */
-	void DoExecute(void);
-
 public:
 	cIsThread(const AString & a_ThreadName);
 	virtual ~cIsThread();
@@ -51,13 +47,18 @@ public:
 
 	/** Returns true if the thread calling this function is the thread contained within this object. */
 	bool IsCurrentThread(void) const { return std::this_thread::get_id() == m_Thread.get_id(); }
+	
+private:
+	/** Wrapper for Execute() that waits for the initialization event, to prevent race conditions in thread initialization. */
+	void DoExecute(void);
 
-protected:
 	AString m_ThreadName;
 	std::thread m_Thread;
 
 	/** The event that is used to wait with the thread's execution until the thread object is fully initialized.
-	This prevents the IsCurrentThread() call to fail because of a race-condition. */
+	This prevents the IsCurrentThread() call to fail because of a race-condition where the thread starts before m_Thread has been fully assigned.
+	Note: dependant on the cEvent behaviour of a call to Wait() not blocking if Set() was called prior with no threads waiting
+	m_Thread can initialise faster than (and call Set() before) the child thread can be created. */
 	cEvent m_evtStart;
 } ;
 
