@@ -9,6 +9,7 @@
 #include "Repeater.h"
 #include "Button.h"
 #include "Lever.h"
+#include "RedstoneBlock.h"
 
 namespace Redstone
 {
@@ -50,6 +51,7 @@ namespace Redstone
 		}
 		else
 		{
+			// updating block meta allows repeater delay and button stats to change, without re-creating the instance.
 			component->SetState(blockType, meta);
 		}
 
@@ -58,18 +60,19 @@ namespace Redstone
 
 	RedstoneType ComponentFactory::GetType(Vector3i location, BLOCKTYPE & blockType, NIBBLETYPE & meta)
 	{
+		// TODO: These are slow? would rather access chunk data directly.
 		blockType = m_World.GetBlock(location);
 		meta = m_World.GetBlockMeta(location);
 
-		// filter solid blocks
+		// first filter solid blocks
 		if (IsSolidBlock(blockType))
 		{
 			return SOLIDBLOCK;
 		}
 
+		// then filter any block we know to be redstone components
 		switch (blockType)
 		{
-			// first redstone specific components
 			case E_BLOCK_REDSTONE_TORCH_OFF:
 			case E_BLOCK_REDSTONE_TORCH_ON:
 				return TORCH;
@@ -83,7 +86,9 @@ namespace Redstone
 				return BUTTON;
 			case E_BLOCK_LEVER:
 				return LEVER;
-				// everything else is not understood by redstone simulator
+			case E_BLOCK_BLOCK_OF_REDSTONE:
+				return REDSTONEBLOCK;
+				// everything else is not understood by redstone simulator (air leaves etc.)
 			default:
 				return UNKNOWN;
 		}
@@ -105,6 +110,8 @@ namespace Redstone
 				return ComponentPtr(std::make_shared<Button>(location, blockType, meta));
 			case LEVER:
 				return ComponentPtr(std::make_shared<Lever>(location, blockType, meta));
+			case REDSTONEBLOCK:
+				return ComponentPtr(std::make_shared<RedstoneBlock>(location));
 			default:
 				return nullptr;
 		}

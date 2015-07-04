@@ -99,5 +99,6 @@ namespace Redstone
 		COMPARATOR,
 		BUTTON,
 		LEVER,
+		REDSTONEBLOCK,
 	};
 }

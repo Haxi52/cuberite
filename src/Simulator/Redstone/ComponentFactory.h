@@ -20,6 +20,7 @@ namespace Redstone
 		ComponentPtr GetComponent(Vector3i location);
 		void PlaySound(std::string name, Vector3i location, float pitch);
 
+		// returns true if the block type is a 'solid block' meaning things like redstone repeater can send power through it.
 		inline static bool IsSolidBlock(BLOCKTYPE blockType)
 		{
 			switch (blockType)
