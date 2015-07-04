@@ -64,7 +64,7 @@ namespace Redstone
 				{
 					cp = std::max(cp, up->CanStrongPower(this));
 				}
-				else if (up->Type == TORCH) // may not need the torch qualifyer here
+				else // if (up->Type == TORCH) // may not need the torch qualifyer here
 				{
 					cp = std::max(cp, up->CanWeakPower(this));
 				}
@@ -79,8 +79,7 @@ namespace Redstone
 
 				// connections = 2 means the wire is pointed at a block
 				// test to see if the connections change, that should queue an update to the surrounding blocks.
-				connectionsUpdated = (oldConnections.size() != Connections.size()) || (oldConnections.size() == 2 &&
-					std::equal(oldConnections.begin(), oldConnections.end(), Connections.begin()));
+				connectionsUpdated = (oldConnections != Connections);
 			}
 			else
 			{
@@ -135,6 +134,7 @@ namespace Redstone
 				if (comp == nullptr) // the side is air, check the block under
 				{
 					cp = std::max(cp, ConnectBlockDown(side, down, factory));
+					cp = std::max(cp, ConnectBlockUp(side, up, factory));
 				}
 				else if (comp->IsFullBlock)
 				{
@@ -143,6 +143,7 @@ namespace Redstone
 				}
 				else
 				{
+					cp = std::max(cp, ConnectBlockDown(side, down, factory));
 					cp = std::max(cp, comp->CanWeakPower(this));
 					Connections.push_back(side); 
 				}
@@ -172,6 +173,7 @@ namespace Redstone
 					return comp->CanWeakPower(this);
 				}
 			}
+			return 0;
 		}
 
 		int ConnectBlockUp(Vector3i side, ComponentPtr up, ComponentFactory & factory)

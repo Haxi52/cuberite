@@ -97,5 +97,7 @@ namespace Redstone
 		WIRE,
 		REPEATER,
 		COMPARATOR,
+		BUTTON,
+		LEVER,
 	};
 }

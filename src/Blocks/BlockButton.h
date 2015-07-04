@@ -19,15 +19,18 @@ public:
 	
 	virtual void OnUse(cChunkInterface & a_ChunkInterface, cWorldInterface & a_WorldInterface, cPlayer * a_Player, int a_BlockX, int a_BlockY, int a_BlockZ, eBlockFace a_BlockFace, int a_CursorX, int a_CursorY, int a_CursorZ) override
 	{
+		NIBBLETYPE Meta = a_ChunkInterface.GetBlockMeta(a_BlockX, a_BlockY, a_BlockZ);
+
+		// If button is already on do nothing
+		if (Meta & 0x08)
+		{
+			return;
+		}
 		// Set p the ON bit to on
-		NIBBLETYPE Meta = (a_ChunkInterface.GetBlockMeta(a_BlockX, a_BlockY, a_BlockZ) | 0x08);
+		Meta |= 0x08;
 
 		a_ChunkInterface.SetBlockMeta(a_BlockX, a_BlockY, a_BlockZ, Meta);
 		a_WorldInterface.WakeUpSimulators(a_BlockX, a_BlockY, a_BlockZ);
-		a_WorldInterface.GetBroadcastManager().BroadcastSoundEffect("random.click", (double)a_BlockX, (double)a_BlockY, (double)a_BlockZ, 0.5f, (Meta & 0x08) ? 0.6f : 0.5f);
-
-		// Queue a button reset (unpress)
-		a_ChunkInterface.QueueSetBlock(a_BlockX, a_BlockY, a_BlockZ, m_BlockType, (a_ChunkInterface.GetBlockMeta(a_BlockX, a_BlockY, a_BlockZ) & 0x07), m_BlockType == E_BLOCK_STONE_BUTTON ? 20 : 30, m_BlockType, a_WorldInterface);
 	}
 
 	

@@ -7,7 +7,8 @@
 #include "SolidBlock.h"
 #include "Wire.h"
 #include "Repeater.h"
-
+#include "Button.h"
+#include "Lever.h"
 
 namespace Redstone
 {
@@ -77,6 +78,11 @@ namespace Redstone
 			case E_BLOCK_REDSTONE_REPEATER_ON:
 			case E_BLOCK_REDSTONE_REPEATER_OFF:
 				return REPEATER;
+			case E_BLOCK_STONE_BUTTON:
+			case E_BLOCK_WOODEN_BUTTON:
+				return BUTTON;
+			case E_BLOCK_LEVER:
+				return LEVER;
 				// everything else is not understood by redstone simulator
 			default:
 				return UNKNOWN;
@@ -95,6 +101,10 @@ namespace Redstone
 				return ComponentPtr(std::make_shared<Wire>(location));
 			case REPEATER:
 				return ComponentPtr(std::make_shared<Repeater>(location, blockType, meta));
+			case BUTTON:
+				return ComponentPtr(std::make_shared<Button>(location, blockType, meta));
+			case LEVER:
+				return ComponentPtr(std::make_shared<Lever>(location, blockType, meta));
 			default:
 				return nullptr;
 		}
