@@ -12,7 +12,7 @@ namespace Redstone
 	public:
 
 		Torch(Vector3i location, BLOCKTYPE blockType, NIBBLETYPE meta) :
-			Component(location, TORCH), m_Meta(meta), ticks(-1), pushUpdate(false), isBurntOut(false), heat(0), lastHeatTick(0)
+			Component(location, RedstoneType::TORCH), m_Meta(meta), ticks(-1), pushUpdate(false), isBurntOut(false), heat(0), lastHeatTick(0)
 		{
 			LOGD("Torch created: %d %d %d", location.x, location.y, location.z);
 			isOn = (blockType == E_BLOCK_REDSTONE_TORCH_ON);
@@ -49,7 +49,7 @@ namespace Redstone
 
 		virtual int CanWeakPower(Component * component)
 		{
-			if (!isOn || component->Location == attachedTo || component->Type == SOLIDBLOCK)
+			if (!isOn || component->Location == attachedTo || component->Type == RedstoneType::SOLIDBLOCK)
 			{
 				return 0;
 			}

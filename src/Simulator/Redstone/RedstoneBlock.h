@@ -12,7 +12,7 @@ namespace Redstone
 	public:
 
 		RedstoneBlock(Vector3i location) :
-			Component(location, REDSTONEBLOCK, true)
+			Component(location, RedstoneType::REDSTONEBLOCK, true)
 		{
 			LOGD("RedstoneBlock created: %d %d %d", location.x, location.y, location.z);
 		}

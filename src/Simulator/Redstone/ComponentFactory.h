@@ -1,15 +1,14 @@
 
 #pragma once
 
-#include "World.h"
-#include "Chunk.h"
 #include "Component.h"
-#include "RedstoneSimulator.h"
+#include "cRedstoneSimulatorChunkData.h"
+
+#include "World.h"
 #include "Vector3.h"
 
 namespace Redstone
 {
-	class Component;
 
 	class ComponentFactory
 	{
@@ -91,11 +90,46 @@ namespace Redstone
 			}
 		}
 
+		inline static RedstoneType ComponentFactory::GetType(BLOCKTYPE blockType)
+		{
+
+			// first filter solid blocks
+			if (IsSolidBlock(blockType))
+			{
+				return RedstoneType::SOLIDBLOCK;
+			}
+
+			// then filter any block we know to be redstone components
+			switch (blockType)
+			{
+				case E_BLOCK_REDSTONE_TORCH_OFF:
+				case E_BLOCK_REDSTONE_TORCH_ON:
+					return RedstoneType::TORCH;
+				case E_BLOCK_REDSTONE_WIRE:
+					return RedstoneType::WIRE;
+				case E_BLOCK_REDSTONE_REPEATER_ON:
+				case E_BLOCK_REDSTONE_REPEATER_OFF:
+					return RedstoneType::REPEATER;
+				case E_BLOCK_STONE_BUTTON:
+				case E_BLOCK_WOODEN_BUTTON:
+					return RedstoneType::BUTTON;
+				case E_BLOCK_LEVER:
+					return RedstoneType::LEVER;
+				case E_BLOCK_BLOCK_OF_REDSTONE:
+					return RedstoneType::REDSTONEBLOCK;
+				case E_BLOCK_REDSTONE_LAMP_OFF:
+				case E_BLOCK_REDSTONE_LAMP_ON:
+					return RedstoneType::REDSTONELAMP;
+					// everything else is not understood by redstone simulator (air leaves etc.)
+				default:
+					return RedstoneType::UNKNOWN;
+			}
+		}
+
 	private:
 		cWorld & m_World;
 		cRedstoneSimulatorChunkData * m_Data;
 		ComponentPtr CreateComponent(RedstoneType type, Vector3i location, BLOCKTYPE blockType, NIBBLETYPE meta);
-		RedstoneType GetType(Vector3i location, BLOCKTYPE & blockType, NIBBLETYPE & meta);
 
 		
 	};

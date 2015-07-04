@@ -1,12 +1,12 @@
 
 #pragma once
 
+#include "RedstoneType.h"
 #include "Vector3.h"
 
 namespace Redstone
 {
 	class ComponentFactory;
-	enum RedstoneType;
 
 	class Component
 	{
@@ -88,17 +88,4 @@ namespace Redstone
 	};
 
 	typedef std::shared_ptr<Component> ComponentPtr;
-	
-	enum RedstoneType : int
-	{
-		UNKNOWN,
-		SOLIDBLOCK,
-		TORCH,
-		WIRE,
-		REPEATER,
-		COMPARATOR,
-		BUTTON,
-		LEVER,
-		REDSTONEBLOCK,
-	};
 }

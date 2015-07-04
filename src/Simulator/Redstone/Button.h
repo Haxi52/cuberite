@@ -12,7 +12,7 @@ namespace Redstone
 	public:
 
 		Button(Vector3i location, BLOCKTYPE blockType, NIBBLETYPE meta) :
-			Component(location, BUTTON), m_Meta(meta), updateTick(-1), pushUpdate(false), setOn(false)
+			Component(location, RedstoneType::BUTTON), m_Meta(meta), updateTick(-1), pushUpdate(false), setOn(false)
 		{
 			LOGD("Button created: %d %d %d", location.x, location.y, location.z);
 			isWooden = (blockType == E_BLOCK_WOODEN_BUTTON);

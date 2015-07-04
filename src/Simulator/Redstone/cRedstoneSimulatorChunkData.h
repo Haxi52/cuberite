@@ -1,8 +1,10 @@
 
 #pragma once
-#include <unordered_map>
-#include "Vector3.h"
+
 #include "Component.h"
+#include "Vector3.h"
+
+#include <unordered_map>
 
 using namespace Redstone;
 

@@ -1,14 +1,13 @@
 
 
 #include "Globals.h"
-
 #include "RedstoneSimulator.h"
-#include "ComponentFactory.h"
-#include "Chunk.h"
+#include "RedstoneType.h"
 #include <algorithm>
 
 void cRedstoneSimulator::SimulateChunk(std::chrono::milliseconds a_Dt, int a_ChunkX, int a_ChunkZ, cChunk * a_Chunk)
 {
+	// TODO: Explore opprotunities to thread
 	return;
 }
 
@@ -42,8 +41,8 @@ void cRedstoneSimulator::Simulate(float a_dt)
 	while (!work.empty())
 	{
 		// grab the first element and remove it from the list
-		Vector3i location = work.back();
-		work.pop_back();
+		Vector3i location = work.front();
+		work.pop_front();
 		ComponentPtr component(factory.GetComponent(location));
 		if (component == nullptr)
 		{
@@ -66,7 +65,6 @@ void cRedstoneSimulator::Simulate(float a_dt)
 			}
 			else if (std::find(work.begin(), work.end(), item) == work.end())
 			{
-				LOGD("Queueing block for update (%d %d %d)", item.x, item.y, item.z);
 				work.push_back(item);
 			}
 		}
@@ -103,16 +101,40 @@ void cRedstoneSimulator::WakeUp(int a_BlockX, int a_BlockY, int a_BlockZ, cChunk
 	{
 		return;
 	}
+	Vector3i location({ a_BlockX, a_BlockY, a_BlockZ });
+	data.WakeUp(location);
+	for (auto side : GetAdjacent(location))
+	{
+		data.WakeUp(side);
+	}
+}
 
-	//auto data = a_Chunk->GetRedstoneSimulatorData();
-	//if (data == nullptr)
-	//{
-	//	data = new cRedstoneSimulatorChunkData();
-	//	a_Chunk->SetRedstoneSimulatorData(data);
-	//}
+void cRedstoneSimulator::AddBlock(int a_BlockX, int a_BlockY, int a_BlockZ, cChunk * a_Chunk)
+{
+	if (!a_Chunk->IsValid())
+	{
+		return;
+	}
 
-	//data->WakeUp(relative);
+	Vector3i relative = cChunkDef::AbsoluteToRelative({ a_BlockX, a_BlockY, a_BlockZ }, a_Chunk->GetPosX(), a_Chunk->GetPosZ());
+
+	if (relative.y < 0)
+	{
+		return;
+	}
 
 	data.WakeUp({ a_BlockX, a_BlockY, a_BlockZ });
+}
 
+inline cVector3iArray cRedstoneSimulator::GetAdjacent(Vector3i location)
+{
+	return
+	{
+		{ location.x + 1, location.y, location.z },
+		{ location.x - 1, location.y, location.z },
+		{ location.x, location.y + 1, location.z },
+		{ location.x, location.y - 1, location.z },
+		{ location.x, location.y, location.z + 1 },
+		{ location.x, location.y, location.z - 1 },
+	};
 }

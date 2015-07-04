@@ -11,7 +11,7 @@ namespace Redstone
 	public:
 
 		Wire(Vector3i location) :
-			Component(location, WIRE), power(0), lastUpdateTick(-1)
+			Component(location, RedstoneType::WIRE), power(0), lastUpdateTick(-1)
 		{
 			LOGD("Wire created {%d %d %d}", location.x, location.y, location.z);
 		}
@@ -29,7 +29,7 @@ namespace Redstone
 			}
 			if (std::find(Connections.begin(), Connections.end(), component->Location) != Connections.end())
 			{
-				if (component->Type == WIRE)
+				if (component->Type == RedstoneType::WIRE)
 				{
 					return std::max(power - 1, 0);
 				}
@@ -64,7 +64,7 @@ namespace Redstone
 				{
 					cp = std::max(cp, up->CanStrongPower(this));
 				}
-				else // if (up->Type == TORCH) // may not need the torch qualifyer here
+				else
 				{
 					cp = std::max(cp, up->CanWeakPower(this));
 				}
@@ -77,8 +77,6 @@ namespace Redstone
 				lastUpdateTick = ticks;
 				cp = std::max(cp, UpdateConnections(factory, down, up));
 
-				// connections = 2 means the wire is pointed at a block
-				// test to see if the connections change, that should queue an update to the surrounding blocks.
 				connectionsUpdated = (oldConnections != Connections);
 			}
 			else
@@ -167,7 +165,7 @@ namespace Redstone
 			{
 				side.Move({ 0, -1, 0 });
 				auto comp = factory.GetComponent(side);
-				if (comp != nullptr && comp->Type == WIRE)
+				if (comp != nullptr && comp->Type == RedstoneType::WIRE)
 				{
 					Connections.push_back(side);
 					return comp->CanWeakPower(this);
@@ -185,7 +183,7 @@ namespace Redstone
 				side.Move({ 0, 1, 0 });
 				auto comp = factory.GetComponent(side);
 				// we can only connect to wires this far away
-				if (comp != nullptr && comp->Type == WIRE)
+				if (comp != nullptr && comp->Type == RedstoneType::WIRE)
 				{
 					Connections.push_back(side);
 					return comp->CanWeakPower(this);

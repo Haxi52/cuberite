@@ -12,7 +12,7 @@ namespace Redstone
 	public:
 
 		Lever(Vector3i location, BLOCKTYPE blockType, NIBBLETYPE meta) :
-			Component(location, LEVER), m_Meta(meta), setOn(false), setOff(false)
+			Component(location, RedstoneType::LEVER), m_Meta(meta), setOn(false), setOff(false)
 		{
 			LOGD("Lever created: %d %d %d", location.x, location.y, location.z);
 			isOn = (meta & 0x08);

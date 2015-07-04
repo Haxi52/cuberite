@@ -11,7 +11,7 @@ namespace Redstone
 
 	public:
 		Repeater(Vector3i location, BLOCKTYPE blockType, NIBBLETYPE meta) :
-			Component(location, REPEATER), meta(meta), pushUpdate(false), isOn(false), targetTicks(0), lastUpdate(-1)
+			Component(location, RedstoneType::REPEATER), meta(meta), pushUpdate(false), isOn(false), targetTicks(0), lastUpdate(-1)
 		{
 			Vector3i arrow; // point me in the right direction
 			switch (meta & 0x3)
@@ -124,7 +124,7 @@ namespace Redstone
 		bool CheckIsPoweredByDiode(ComponentPtr comp)
 		{
 			return comp != nullptr &&
-				(comp->Type == REPEATER || comp->Type == COMPARATOR) &&
+				(comp->Type == RedstoneType::REPEATER || comp->Type == RedstoneType::COMPARATOR) &&
 				(comp->CanStrongPower(this) > 0);
 		}
 		int lastUpdate;

@@ -12,7 +12,7 @@ namespace Redstone
 	public:
 
 		SolidBlock(Vector3i location) :
-			Component(location, SOLIDBLOCK, true), isStrongPowered(false), power(0)
+			Component(location, RedstoneType::SOLIDBLOCK, true), isStrongPowered(false), power(0)
 		{
 			LOGD("SolidBlock created {%d %d %d}", location.x, location.y, location.z);
 		}
@@ -66,6 +66,7 @@ namespace Redstone
 				isStrongPowered = cSp;
 				return GetAdjacent();
 			}
+
 			return {};
 		}
 

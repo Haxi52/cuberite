@@ -1,8 +1,11 @@
 
 #pragma once
 
-#include "../Simulator.h"
 #include "cRedstoneSimulatorChunkData.h"
+#include "ComponentFactory.h"
+
+#include "../Simulator.h"
+#include "Chunk.h"
 #include <unordered_map>
 #include <vector>
 
@@ -29,22 +32,21 @@ public:
 		return new cRedstoneSimulatorChunkData;
 	}
 
-	virtual bool IsAllowedBlock(BLOCKTYPE a_BlockType) 
+	virtual bool IsAllowedBlock(BLOCKTYPE a_BlockType) override
 	{
-		return a_BlockType == E_BLOCK_REDSTONE_TORCH_ON ||
-			a_BlockType == E_BLOCK_REDSTONE_TORCH_OFF ||
-			a_BlockType == E_BLOCK_IRON_BLOCK;
+		auto componentType = ComponentFactory::GetType(a_BlockType);
+		return !(componentType == RedstoneType::UNKNOWN || componentType == RedstoneType::SOLIDBLOCK);
 	}
 	
 protected:
-	virtual void AddBlock(int a_BlockX, int a_BlockY, int a_BlockZ, cChunk * a_Chunk)
-	{
-		WakeUp(a_BlockX, a_BlockY, a_BlockZ, a_Chunk);
-	}
+	virtual void AddBlock(int a_BlockX, int a_BlockY, int a_BlockZ, cChunk * a_Chunk);
 
 private:
 	long m_ticks;
 	
 	// oh yea its crazy time
+	// this is temporary, use chunk data per chunk, not globally like this.
 	cRedstoneSimulatorChunkData data;
+
+	inline cVector3iArray cRedstoneSimulator::GetAdjacent(Vector3i location);
 } ;
