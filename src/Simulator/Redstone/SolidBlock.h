@@ -40,7 +40,8 @@ namespace Redstone
 			int cp = 0;
 			// calculated value for strongly powered
 			bool cSp = false;
-
+			// create a list of components that may need updating
+			cVector3iArray updateThese;
 			for (auto side : GetAdjacent())
 			{
 				ComponentPtr comp = factory.GetComponent(side);
@@ -58,13 +59,17 @@ namespace Redstone
 					}
 					cp = std::max(cp, p);
 				}
+				if (comp->Type != RedstoneType::SOLIDBLOCK)
+				{
+					updateThese.push_back(side);
+				}
 			}
 
 			if (cp != power || cSp != isStrongPowered)
 			{
 				power = cp;
 				isStrongPowered = cSp;
-				return GetAdjacent();
+				return updateThese;
 			}
 
 			return {};

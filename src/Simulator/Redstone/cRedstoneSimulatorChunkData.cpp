@@ -20,11 +20,12 @@ void cRedstoneSimulatorChunkData::WakeUp(Vector3i location)
 
 ComponentPtr cRedstoneSimulatorChunkData::GetComponent(Vector3i location)
 {
-	if (m_ChunkData.find(location) == m_ChunkData.end())
+	auto result = m_ChunkData.find(location);
+	if (result == m_ChunkData.end())
 	{
 		return nullptr;
 	}
-	return m_ChunkData[location];
+	return result->second;
 }
 
 void cRedstoneSimulatorChunkData::RemoveComponent(Vector3i location)
