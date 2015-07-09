@@ -2003,6 +2003,22 @@ bool cChunk::ForEachEntity(cEntityCallback & a_Callback)
 
 
 
+void cChunk::ForEachEntity(const std::function<bool(cEntity*)> & a_Func)
+{
+	for (auto * entity : m_Entities)
+	{
+		if (!a_Func(entity))
+		{
+			return;
+		}
+	}
+}
+
+
+
+
+
+
 bool cChunk::ForEachEntityInBox(const cBoundingBox & a_Box, cEntityCallback & a_Callback)
 {
 	// The entity list is locked by the parent chunkmap's CS

@@ -231,6 +231,8 @@ public:
 	/** Calls the callback for each entity in the specified chunk; returns true if all entities processed, false if the callback aborted by returning true */
 	bool ForEachEntityInChunk(int a_ChunkX, int a_ChunkZ, cEntityCallback & a_Callback);  // Lua-accessible
 
+	void ForEachEntityInChunk(int a_ChunkX, int a_ChunkZ, const std::function<bool(cEntity*)> & a_Func);
+
 	/** Calls the callback for each entity that has a nonempty intersection with the specified boundingbox.
 	Returns true if all entities processed, false if the callback aborted by returning true.
 	If any chunk in the box is missing, ignores the entities in that chunk silently. */

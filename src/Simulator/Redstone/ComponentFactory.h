@@ -18,6 +18,8 @@ namespace Redstone
 
 		ComponentPtr GetComponent(Vector3i location);
 		void PlaySound(std::string name, Vector3i location, float pitch);
+		// hack until we link up to chunks
+		void ForEachEntity(Vector3i location, const std::function<bool(cEntity*)> & a_Func);
 
 		// returns true if the block type is a 'solid block' meaning things like redstone repeater can send power through it.
 		inline static bool IsSolidBlock(BLOCKTYPE blockType)
@@ -120,6 +122,11 @@ namespace Redstone
 				case E_BLOCK_REDSTONE_LAMP_OFF:
 				case E_BLOCK_REDSTONE_LAMP_ON:
 					return RedstoneType::REDSTONELAMP;
+				case E_BLOCK_STONE_PRESSURE_PLATE:
+				case E_BLOCK_WOODEN_PRESSURE_PLATE:
+				case E_BLOCK_LIGHT_WEIGHTED_PRESSURE_PLATE:
+				case E_BLOCK_HEAVY_WEIGHTED_PRESSURE_PLATE:
+					return RedstoneType::PRESSUREPLATE;
 					// everything else is not understood by redstone simulator (air leaves etc.)
 				default:
 					return RedstoneType::UNKNOWN;

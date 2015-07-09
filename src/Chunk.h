@@ -246,6 +246,8 @@ public:
 	/** Calls the callback for each entity; returns true if all entities processed, false if the callback aborted by returning true */
 	bool ForEachEntity(cEntityCallback & a_Callback);  // Lua-accessible
 
+	void ForEachEntity(const std::function<bool(cEntity*)> & a_Func);
+
 	/** Calls the callback for each entity that has a nonempty intersection with the specified boundingbox.
 	Returns true if all entities processed, false if the callback aborted by returning true. */
 	bool ForEachEntityInBox(const cBoundingBox & a_Box, cEntityCallback & a_Callback);  // Lua-accessible

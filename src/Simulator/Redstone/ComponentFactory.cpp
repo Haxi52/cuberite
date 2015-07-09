@@ -11,6 +11,7 @@
 #include "Lever.h"
 #include "RedstoneBlock.h"
 #include "RedstoneLamp.h"
+#include "PressurePlate.h"
 
 namespace Redstone
 {
@@ -28,6 +29,13 @@ namespace Redstone
 			0.5f, pitch);
 	}
 
+	void ComponentFactory::ForEachEntity(Vector3i location, const std::function<bool(cEntity*)> & a_Func)
+	{
+		int x;
+		int y;
+		cChunkDef::BlockToChunk(location.x, location.z, x, y);
+		m_World.GetChunkMap()->ForEachEntityInChunk(x, y, a_Func);
+	}
 
 	ComponentPtr ComponentFactory::GetComponent(Vector3i location)
 	{
@@ -83,6 +91,9 @@ namespace Redstone
 				return ComponentPtr(std::make_shared<RedstoneBlock>(location));
 			case RedstoneType::REDSTONELAMP:
 				return ComponentPtr(std::make_shared<RedstoneLamp>(location, blockType, meta));
+			case RedstoneType::PRESSUREPLATE:
+				return ComponentPtr(std::make_shared<PressurePlate>(location, blockType, meta));
+
 			default:
 				return nullptr;
 		}

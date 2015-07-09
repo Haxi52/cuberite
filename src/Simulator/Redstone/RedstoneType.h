@@ -14,5 +14,6 @@ namespace Redstone
 		LEVER,
 		REDSTONEBLOCK,
 		REDSTONELAMP,
+		PRESSUREPLATE,
 	};
 }

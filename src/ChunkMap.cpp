@@ -1841,6 +1841,21 @@ bool cChunkMap::ForEachEntityInChunk(int a_ChunkX, int a_ChunkZ, cEntityCallback
 
 
 
+void cChunkMap::ForEachEntityInChunk(int a_ChunkX, int a_ChunkZ, const std::function<bool(cEntity*)> & a_Func)
+{
+	cCSLock Lock(m_CSLayers);
+	cChunkPtr Chunk = GetChunkNoGen(a_ChunkX, a_ChunkZ);
+	if ((Chunk == nullptr) || !Chunk->IsValid())
+	{
+		return;
+	}
+	Chunk->ForEachEntity(a_Func);
+}
+
+
+
+
+
 bool cChunkMap::ForEachEntityInBox(const cBoundingBox & a_Box, cEntityCallback & a_Callback)
 {
 	// Calculate the chunk range for the box:
