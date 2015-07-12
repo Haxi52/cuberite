@@ -27,6 +27,7 @@ namespace Redstone
 		virtual bool GetState(BLOCKTYPE & block, NIBBLETYPE & meta) = 0;
 		virtual int CanStrongPower(Component * component) = 0;
 		virtual int CanWeakPower(Component * component) = 0;
+		virtual bool CanConnect(Component * component) = 0;
 
 		~Component() {}
 

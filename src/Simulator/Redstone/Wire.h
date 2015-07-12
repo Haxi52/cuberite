@@ -17,6 +17,11 @@ namespace Redstone
 			LOGD("Wire created {%d %d %d}", location.x, location.y, location.z);
 		}
 
+		virtual bool CanConnect(Component * component)
+		{
+			return true;
+		}
+
 		virtual int CanStrongPower(Component * component)
 		{
 			return 0;
@@ -69,7 +74,7 @@ namespace Redstone
 				{
 					cp = std::max(cp, up->CanStrongPower(this));
 				}
-				else
+				else if (up->CanConnect(this))
 				{
 					cp = std::max(cp, up->CanWeakPower(this));
 				}
@@ -153,12 +158,19 @@ namespace Redstone
 				{
 					cp = std::max(cp, comp->CanStrongPower(this));
 					cp = std::max(cp, ConnectBlockUp(side, up, factory));
+					if (comp->CanConnect(this))
+					{
+						Connections.push_back(i);
+					}
 				}
 				else
 				{
 					cp = std::max(cp, ConnectBlockDown(side, down, factory));
 					cp = std::max(cp, comp->CanWeakPower(this));
-					Connections.push_back(i);
+					if (comp->CanConnect(this))
+					{
+						Connections.push_back(i);
+					}
 				}
 			}
 

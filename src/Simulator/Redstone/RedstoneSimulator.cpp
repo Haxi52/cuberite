@@ -17,7 +17,7 @@ void cRedstoneSimulator::Simulate(float a_dt)
 	// redstone ticks are every other world tick
 	m_ticks++;
 
-	if (m_ticks % 2 == 0)
+	if (m_ticks % 2 != 0)
 	{
 		return;
 	}
@@ -26,14 +26,8 @@ void cRedstoneSimulator::Simulate(float a_dt)
 	ComponentFactory factory(m_World, &data);
 
 	// build our work queue
-	std::deque<Vector3i> work;
-
 	cVector3iArray & blocks = data.GetActiveBlocks();
-	for (Vector3i & block : blocks)
-	{
-		work.push_back(block);
-	}
-
+	std::deque<Vector3i> work(begin(blocks), end(blocks));
 	blocks.clear();
 
 	// process the work queue
@@ -63,7 +57,7 @@ void cRedstoneSimulator::Simulate(float a_dt)
 					updated.push_back(component);
 				}
 			}
-			else if (std::find(work.begin(), work.end(), item) == work.end())
+			else if (std::find(begin(work), end(work), item) == end(work))
 			{
 				work.push_back(item);
 			}

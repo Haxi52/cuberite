@@ -35,6 +35,12 @@ namespace Redstone
 			attachedTo = location + Vector3i{ 0, -1, 0 };
 		}
 
+		virtual bool CanConnect(Component * component)
+		{
+			return Location.y == component->Location.y &&
+				IsAdjacent(component->Location);
+		}
+
 
 		virtual int CanStrongPower(Component * component)
 		{

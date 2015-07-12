@@ -127,6 +127,14 @@ namespace Redstone
 				case E_BLOCK_LIGHT_WEIGHTED_PRESSURE_PLATE:
 				case E_BLOCK_HEAVY_WEIGHTED_PRESSURE_PLATE:
 					return RedstoneType::PRESSUREPLATE;
+				case E_BLOCK_ACACIA_FENCE_GATE:
+				case E_BLOCK_BIRCH_FENCE_GATE:
+				case E_BLOCK_DARK_OAK_FENCE_GATE:
+				case E_BLOCK_FENCE_GATE:
+				case E_BLOCK_JUNGLE_FENCE_GATE:
+				case E_BLOCK_SPRUCE_FENCE_GATE:
+					return RedstoneType::FENCEGATE;
+
 					// everything else is not understood by redstone simulator (air leaves etc.)
 				default:
 					return RedstoneType::UNKNOWN;

@@ -12,6 +12,7 @@
 #include "RedstoneBlock.h"
 #include "RedstoneLamp.h"
 #include "PressurePlate.h"
+#include "FenceGate.h"
 
 namespace Redstone
 {
@@ -93,6 +94,8 @@ namespace Redstone
 				return ComponentPtr(std::make_shared<RedstoneLamp>(location, blockType, meta));
 			case RedstoneType::PRESSUREPLATE:
 				return ComponentPtr(std::make_shared<PressurePlate>(location, blockType, meta));
+			case RedstoneType::FENCEGATE:
+				return ComponentPtr(std::make_shared<FenceGate>(location, blockType, meta));
 
 			default:
 				return nullptr;

@@ -37,6 +37,11 @@ namespace Redstone
 			}
 		}
 
+		virtual bool CanConnect(Component * component)
+		{
+			return component->Location != attachedTo &&
+				IsAdjacent(component->Location);
+		}
 
 		virtual int CanStrongPower(Component * component)
 		{

@@ -15,5 +15,6 @@ namespace Redstone
 		REDSTONEBLOCK,
 		REDSTONELAMP,
 		PRESSUREPLATE,
+		FENCEGATE
 	};
 }

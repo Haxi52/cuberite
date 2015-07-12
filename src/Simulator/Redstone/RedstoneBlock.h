@@ -17,6 +17,11 @@ namespace Redstone
 			LOGD("RedstoneBlock created: %d %d %d", location.x, location.y, location.z);
 		}
 
+		virtual bool CanConnect(Component * component)
+		{
+			return true; // IsAdjacent(component->Location);
+		}
+
 		virtual int CanStrongPower(Component * component)
 		{
 			return IsAdjacent(component->Location) ? 15 : 0;

@@ -41,6 +41,12 @@ namespace Redstone
 			delay = ((meta & 0xC) >> 0x2) + 1;
 		}
 
+		virtual bool CanConnect(Component * component)
+		{
+			return component->Location == front ||
+				component->Location == back;
+		}
+
 		virtual int CanStrongPower(Component * component)
 		{
 			if (isOn && component->Location == front)

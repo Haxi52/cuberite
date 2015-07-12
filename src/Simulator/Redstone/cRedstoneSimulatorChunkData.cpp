@@ -11,7 +11,7 @@ void cRedstoneSimulatorChunkData::WakeUp(Vector3i location)
 	}
 	else
 	{
-		if (find(m_ActiveBlocks.begin(), m_ActiveBlocks.end(), location) == m_ActiveBlocks.end())
+		if (find(begin(m_ActiveBlocks), end(m_ActiveBlocks), location) == end(m_ActiveBlocks))
 		{
 			m_ActiveBlocks.push_back(location);
 		}
@@ -21,7 +21,7 @@ void cRedstoneSimulatorChunkData::WakeUp(Vector3i location)
 ComponentPtr cRedstoneSimulatorChunkData::GetComponent(Vector3i location)
 {
 	auto result = m_ChunkData.find(location);
-	if (result == m_ChunkData.end())
+	if (result == end(m_ChunkData))
 	{
 		return nullptr;
 	}

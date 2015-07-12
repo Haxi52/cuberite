@@ -17,6 +17,11 @@ namespace Redstone
 			LOGD("SolidBlock created {%d %d %d}", location.x, location.y, location.z);
 		}
 
+		virtual bool CanConnect(Component * component)
+		{
+			return false;
+		}
+
 		virtual int CanStrongPower(Component * component)
 		{
 			return isStrongPowered ? power : 0;

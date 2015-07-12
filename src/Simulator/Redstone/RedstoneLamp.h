@@ -18,6 +18,11 @@ namespace Redstone
 			isOn = (blockType == E_BLOCK_REDSTONE_LAMP_ON);
 		}
 
+		virtual bool CanConnect(Component * component)
+		{
+			return false;
+		}
+
 		virtual int CanStrongPower(Component * component)
 		{ 
 			if (isStrongPowered && IsAdjacent(component->Location))
