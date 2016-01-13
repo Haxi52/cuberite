@@ -6,6 +6,7 @@
 
 #include "Globals.h"
 #include "DropSpenserEntity.h"
+#include "../EffectID.h"
 #include "../Entities/Player.h"
 #include "../Chunk.h"
 #include "../UI/DropSpenserWindow.h"
@@ -16,8 +17,7 @@
 
 cDropSpenserEntity::cDropSpenserEntity(BLOCKTYPE a_BlockType, int a_BlockX, int a_BlockY, int a_BlockZ, cWorld * a_World) :
 	super(a_BlockType, a_BlockX, a_BlockY, a_BlockZ, ContentsWidth, ContentsHeight, a_World),
-	m_ShouldDropSpense(false),
-	m_IsPowered(false)
+	m_ShouldDropSpense(false)
 {
 }
 
@@ -89,14 +89,14 @@ void cDropSpenserEntity::DropSpense(cChunk & a_Chunk)
 	int SmokeDir = 0;
 	switch (Meta)
 	{
-		case E_META_DROPSPENSER_FACING_YP: SmokeDir = 4; break;  // YP & YM don't have associated smoke dirs, just do 4 (centre of block)
-		case E_META_DROPSPENSER_FACING_YM: SmokeDir = 4; break;
-		case E_META_DROPSPENSER_FACING_XM: SmokeDir = 3; break;
-		case E_META_DROPSPENSER_FACING_XP: SmokeDir = 5; break;
-		case E_META_DROPSPENSER_FACING_ZM: SmokeDir = 1; break;
-		case E_META_DROPSPENSER_FACING_ZP: SmokeDir = 7; break;
+		case E_META_DROPSPENSER_FACING_YP: SmokeDir = static_cast<int>(SmokeDirection::CENTRE); break;  // YP & YM don't have associated smoke dirs, just do 4 (centre of block)
+		case E_META_DROPSPENSER_FACING_YM: SmokeDir = static_cast<int>(SmokeDirection::CENTRE); break;
+		case E_META_DROPSPENSER_FACING_XM: SmokeDir = static_cast<int>(SmokeDirection::EAST); break;
+		case E_META_DROPSPENSER_FACING_XP: SmokeDir = static_cast<int>(SmokeDirection::WEST); break;
+		case E_META_DROPSPENSER_FACING_ZM: SmokeDir = static_cast<int>(SmokeDirection::SOUTH); break;
+		case E_META_DROPSPENSER_FACING_ZP: SmokeDir = static_cast<int>(SmokeDirection::NORTH); break;
 	}
-	m_World->BroadcastSoundParticleEffect(2000, m_PosX, m_PosY, m_PosZ, SmokeDir);
+	m_World->BroadcastSoundParticleEffect(EffectID::PARTICLE_SMOKE, m_PosX, m_PosY, m_PosZ, SmokeDir);
 	m_World->BroadcastSoundEffect("random.click", static_cast<double>(m_PosX), static_cast<double>(m_PosY), static_cast<double>(m_PosZ), 1.0f, 1.0f);
 }
 
@@ -107,19 +107,6 @@ void cDropSpenserEntity::DropSpense(cChunk & a_Chunk)
 void cDropSpenserEntity::Activate(void)
 {
 	m_ShouldDropSpense = true;
-}
-
-
-
-
-
-void cDropSpenserEntity::SetRedstonePower(bool a_IsPowered)
-{
-	if (a_IsPowered && !m_IsPowered)
-	{
-		Activate();
-	}
-	m_IsPowered = a_IsPowered;
 }
 
 
@@ -153,7 +140,7 @@ void cDropSpenserEntity::SendTo(cClientHandle & a_Client)
 
 
 
-void cDropSpenserEntity::UsedBy(cPlayer * a_Player)
+bool cDropSpenserEntity::UsedBy(cPlayer * a_Player)
 {
 	cWindow * Window = GetWindow();
 	if (Window == nullptr)
@@ -169,6 +156,7 @@ void cDropSpenserEntity::UsedBy(cPlayer * a_Player)
 			a_Player->OpenWindow(Window);
 		}
 	}
+	return true;
 }
 
 

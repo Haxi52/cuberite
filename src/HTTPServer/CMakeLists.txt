@@ -1,6 +1,6 @@
 
 cmake_minimum_required (VERSION 2.6)
-project (MCServer)
+project (Cuberite)
 
 include_directories ("${PROJECT_SOURCE_DIR}/../")
 
@@ -12,7 +12,9 @@ SET (SRCS
 	HTTPServer.cpp
 	MultipartParser.cpp
 	NameValueParser.cpp
-	SslHTTPConnection.cpp)
+	SslHTTPConnection.cpp
+	UrlParser.cpp
+)
 
 SET (HDRS
 	EnvelopeParser.h
@@ -22,7 +24,9 @@ SET (HDRS
 	HTTPServer.h
 	MultipartParser.h
 	NameValueParser.h
-	SslHTTPConnection.h)
+	SslHTTPConnection.h
+	UrlParser.h
+)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	set_source_files_properties(HTTPServer.cpp PROPERTIES COMPILE_FLAGS "-Wno-error=global-constructors ")

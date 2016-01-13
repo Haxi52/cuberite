@@ -9,14 +9,13 @@ if (MSVC)
 endif()
 
 # These env variables are used for configuring Travis CI builds.
-# See https://github.com/mc-server/MCServer/pull/767
 if(DEFINED ENV{TRAVIS_CUBERITE_BUILD_TYPE})
 	message("Setting build type to $ENV{TRAVIS_CUBERITE_BUILD_TYPE}")
 	set(CMAKE_BUILD_TYPE $ENV{TRAVIS_CUBERITE_BUILD_TYPE})
 endif()
 
-if(DEFINED ENV{TRAVIS_MCSERVER_FORCE32})
-	set(FORCE32 $ENV{TRAVIS_MCSERVER_FORCE32})
+if(DEFINED ENV{TRAVIS_CUBERITE_FORCE32})
+	set(FORCE32 $ENV{TRAVIS_CUBERITE_FORCE32})
 endif()
 
 if(DEFINED ENV{TRAVIS_BUILD_WITH_COVERAGE})
@@ -34,6 +33,7 @@ if(DEFINED ENV{CUBERITE_BUILD_ID})
 		message("Commit id not set, attempting to determine id from git")
 		execute_process(
 			COMMAND git rev-parse HEAD
+			WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
 			RESULT_VARIABLE GIT_EXECUTED
 			OUTPUT_VARIABLE BUILD_COMMIT_ID
 		)
@@ -48,6 +48,7 @@ else()
 	set(BUILD_SERIES_NAME "local build")
 	execute_process(
 		COMMAND git rev-parse HEAD
+		WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
 		RESULT_VARIABLE GIT_EXECUTED
 		OUTPUT_VARIABLE BUILD_COMMIT_ID
 	)
@@ -57,6 +58,7 @@ else()
 	string(STRIP ${BUILD_COMMIT_ID} BUILD_COMMIT_ID)
 	execute_process(
 		COMMAND git log -1 --date=iso --pretty=format:%ai
+		WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
 		RESULT_VARIABLE GIT_EXECUTED
 		OUTPUT_VARIABLE BUILD_DATETIME
 	)
@@ -167,6 +169,33 @@ endif()
 if (NOT EXISTS ${CMAKE_SOURCE_DIR}/lib/jsoncpp/CMakeLists.txt)
 	message(FATAL_ERROR "JsonCPP is missing in folder lib/jsoncpp. Have you initialized and updated the submodules / downloaded the extra libraries?")
 endif()
+if (NOT EXISTS ${CMAKE_SOURCE_DIR}/lib/cmake-coverage/CodeCoverage.cmake)
+	message(FATAL_ERROR "cmake-coverage is missing in folder lib/cmake-coverage. Have you initialized and updated the submodules / downloaded the extra libraries?")
+endif()
+if (NOT EXISTS ${CMAKE_SOURCE_DIR}/lib/expat/CMakeLists.txt)
+	message(FATAL_ERROR "expat is missing in folder lib/expat. Have you initialized and updated the submodules / downloaded the extra libraries?")
+endif()
+if (NOT EXISTS ${CMAKE_SOURCE_DIR}/lib/lua/CMakeLists.txt)
+	message(FATAL_ERROR "lua is missing in folder lib/lua. Have you initialized and updated the submodules / downloaded the extra libraries?")
+endif()
+if (NOT EXISTS ${CMAKE_SOURCE_DIR}/lib/luaexpat/CMakeLists.txt)
+	message(FATAL_ERROR "luaexpat is missing in folder lib/luaexpat. Have you initialized and updated the submodules / downloaded the extra libraries?")
+endif()
+if (NOT EXISTS ${CMAKE_SOURCE_DIR}/lib/luaproxy/CMakeLists.txt)
+	message(FATAL_ERROR "luaproxy is missing in folder lib/luaproxy. Have you initialized and updated the submodules / downloaded the extra libraries?")
+endif()
+if (NOT EXISTS ${CMAKE_SOURCE_DIR}/lib/sqlite/CMakeLists.txt)
+	message(FATAL_ERROR "sqlite is missing in folder lib/sqlite. Have you initialized and updated the submodules / downloaded the extra libraries?")
+endif()
+if (NOT EXISTS ${CMAKE_SOURCE_DIR}/lib/tolua++/CMakeLists.txt)
+	message(FATAL_ERROR "tolua++ is missing in folder lib/tolua++. Have you initialized and updated the submodules / downloaded the extra libraries?")
+endif()
+if (NOT EXISTS ${CMAKE_SOURCE_DIR}/lib/zlib/CMakeLists.txt)
+	message(FATAL_ERROR "zlib is missing in folder lib/zlib. Have you initialized and updated the submodules / downloaded the extra libraries?")
+endif()
+
+
+
 
 # Include all the libraries:
 add_subdirectory(lib/jsoncpp/)

@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.6)
-project (MCServer)
+project (Cuberite)
 
 include_directories ("${PROJECT_SOURCE_DIR}/../")
 include_directories (".")
@@ -8,6 +8,7 @@ SET (SRCS
 	Bindings.cpp
 	DeprecatedBindings.cpp
 	LuaChunkStay.cpp
+	LuaJson.cpp
 	LuaNameLookup.cpp
 	LuaServerHandle.cpp
 	LuaState.cpp
@@ -30,6 +31,7 @@ SET (HDRS
 	DeprecatedBindings.h
 	LuaChunkStay.h
 	LuaFunctions.h
+	LuaJson.h
 	LuaNameLookup.h
 	LuaServerHandle.h
 	LuaState.h
@@ -152,5 +154,5 @@ endif()
 
 if(NOT MSVC)
 	add_library(Bindings ${SRCS} ${HDRS})
-	target_link_libraries(Bindings lua sqlite tolualib mbedtls)
+	target_link_libraries(Bindings lua sqlite tolualib mbedtls HTTPServer)
 endif()

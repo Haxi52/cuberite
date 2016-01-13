@@ -107,7 +107,7 @@ local g_Services =
 			
 			-- Send a welcome message to newly accepted connections:
 			OnAccepted = function (a_Link)
-				a_Link:Send("Hello, " .. a_Link:GetRemoteIP() .. ", welcome to the echo server @ MCServer-Lua\r\n")
+				a_Link:Send("Hello, " .. a_Link:GetRemoteIP() .. ", welcome to the echo server @ Cuberite-Lua\r\n")
 			end,  -- OnAccepted()
 			
 			-- There was an error listening on the port:
@@ -140,7 +140,7 @@ local g_Services =
 			
 			-- Send a welcome message and the fortune to newly accepted connections:
 			OnAccepted = function (a_Link)
-				a_Link:Send("Hello, " .. a_Link:GetRemoteIP() .. ", welcome to the fortune server @ MCServer-Lua\r\n\r\nYour fortune:\r\n")
+				a_Link:Send("Hello, " .. a_Link:GetRemoteIP() .. ", welcome to the fortune server @ Cuberite-Lua\r\n\r\nYour fortune:\r\n")
 				a_Link:Send(g_Fortunes[math.random(#g_Fortunes)] .. "\r\n")
 			end,  -- OnAccepted()
 			
@@ -365,6 +365,49 @@ function HandleConsoleNetListen(a_Split)
 	end
 	g_Servers[Port] = srv
 	return true, Service .. " server started on port " .. Port
+end
+
+
+
+
+
+function HandleConsoleNetSClient(a_Split)
+	-- Get the address to connect to:
+	local Host = a_Split[3] or "github.com"
+	local Port = a_Split[4] or 443
+
+	-- Create the callbacks "personalised" for the address:
+	local Callbacks =
+	{
+		OnConnected = function (a_Link)
+			LOG("Connected to " .. Host .. ":" .. Port .. ".")
+			LOG("Connection stats: Remote address: " .. a_Link:GetRemoteIP() .. ":" .. a_Link:GetRemotePort() .. ", Local address: " .. a_Link:GetLocalIP() .. ":" .. a_Link:GetLocalPort())
+			LOG("Sending HTTP request for front page.")
+			a_Link:StartTLSClient()
+			a_Link:Send("GET / HTTP/1.0\r\nHost: " .. Host .. "\r\n\r\n")
+		end,
+
+		OnError = function (a_Link, a_ErrorCode, a_ErrorMsg)
+			LOG("Connection to " .. Host .. ":" .. Port .. " failed: " .. a_ErrorCode .. " (" .. a_ErrorMsg .. ")")
+		end,
+
+		OnReceivedData = function (a_Link, a_Data)
+			LOG("Received data from " .. Host .. ":" .. Port .. ":\r\n" .. a_Data)
+		end,
+
+		OnRemoteClosed = function (a_Link)
+			LOG("Connection to " .. Host .. ":" .. Port .. " was closed by the remote peer.")
+		end
+	}
+
+	-- Queue a connect request:
+	local res = cNetwork:Connect(Host, Port, Callbacks)
+	if not(res) then
+		LOGWARNING("cNetwork:Connect call failed immediately")
+		return true
+	end
+
+	return true, "SSL Client connection request queued."
 end
 
 

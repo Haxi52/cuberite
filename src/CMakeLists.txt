@@ -9,8 +9,8 @@ include_directories (SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../lib/libevent/include
 
 set(FOLDERS
 	OSSupport HTTPServer Items Blocks Protocol Generating PolarSSL++ Bindings
-	WorldStorage Mobs Entities Simulator BlockEntities UI Generating/Prefabs
-	Noise
+	WorldStorage Mobs Entities Simulator Simulator/IncrementalRedstoneSimulator
+	BlockEntities UI Noise
 )
 
 SET (SRCS
@@ -18,6 +18,7 @@ SET (SRCS
 	BlockArea.cpp
 	BlockID.cpp
 	BlockInfo.cpp
+	BrewingRecipes.cpp
 	Broadcaster.cpp
 	BoundingBox.cpp
 	ByteBuffer.cpp
@@ -84,6 +85,7 @@ SET (HDRS
 	BlockInServerPluginInterface.h
 	BlockInfo.h
 	BlockTracer.h
+	BrewingRecipes.h
 	Broadcaster.h
 	BoundingBox.h
 	BuildInfo.h
@@ -105,6 +107,7 @@ SET (HDRS
 	Cuboid.h
 	DeadlockDetect.h
 	Defines.h
+	EffectID.h
 	Enchantments.h
 	Endianness.h
 	FastRandom.h
@@ -143,6 +146,7 @@ SET (HDRS
 	SettingsRepositoryInterface.h
 	SpawnPrepare.h
 	Statistics.h
+	Stopwatch.h
 	StringCompression.h
 	StringUtils.h
 	Tracer.h
@@ -212,7 +216,7 @@ if (NOT MSVC)
 
 	# If building a windows version, but not using MSVC, add the resources directly to the makefile:
 	if (WIN32)
-		list(APPEND SOURCE "Resources/MCServer.rc")
+		list(APPEND SOURCE "Resources/Cuberite.rc")
 	endif()
 else ()
 	# MSVC-specific handling: Put all files into one project, separate by the folders:
@@ -272,7 +276,7 @@ else ()
 	SET_SOURCE_FILES_PROPERTIES(
 		"StackWalker.cpp LeakFinder.cpp" PROPERTIES COMPILE_FLAGS "/Yc\"Globals.h\""
 	)
-	list(APPEND SOURCE "Resources/MCServer.rc")
+	list(APPEND SOURCE "Resources/Cuberite.rc")
 
 	# Make MSVC generate the PDB files even for the release build:
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
@@ -361,8 +365,9 @@ endif ()
 if (NOT MSVC)
 	target_link_libraries(${EXECUTABLE}
 		OSSupport HTTPServer Bindings Items Blocks Noise
-		Protocol Generating Generating_Prefabs WorldStorage
-		Mobs Entities Simulator BlockEntities UI PolarSSL++
+		Protocol Generating WorldStorage
+		Mobs Entities Simulator IncrementalRedstoneSimulator
+		BlockEntities UI PolarSSL++
 	)
 endif ()
 if (WIN32)
@@ -371,6 +376,7 @@ endif()
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
 	add_flags_lnk(-L/usr/local/lib)
+	add_flags_lnk(-L/usr/ports/devel)
 endif()
 
 target_link_libraries(${EXECUTABLE} luaexpat jsoncpp_lib_static mbedtls zlib sqlite lua SQLiteCpp event_core event_extra)

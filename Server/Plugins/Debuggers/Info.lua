@@ -124,6 +124,12 @@ g_PluginInfo =
 			Handler = HandlePickups,
 			HelpString = "Spawns random pickups around you"
 		},
+		["/plugmsg"] =
+		{
+			Permission = "debuggers",
+			Handler = HandlePlugMsg,
+			HelpString = "Sends a test plugin message to the client",
+		},
 		["/poison"] =
 		{
 			Permission = "debuggers",
@@ -236,10 +242,28 @@ g_PluginInfo =
 			HelpString = "Tests the world scheduling",
 		},
 		
+		["testjson"] =
+		{
+			Handler = HandleConsoleTestJson,
+			HelpString = "Tests the cJson parser and serializer",
+		},
+
 		["testtracer"] =
 		{
 			Handler = HandleConsoleTestTracer,
 			HelpString = "Tests the cLineBlockTracer",
+		},
+		
+		["testurlparser"] =
+		{
+			Handler = HandleConsoleTestUrlParser,
+			HelpString = "Tests the cUrlParser",
+		},
+		
+		["uuid"] =
+		{
+			Handler = HandleConsoleUuid,
+			HelpString = "Queries the cMojangAPI for a player's UUID",
 		}
 	},  -- ConsoleCommands
 }  -- g_PluginInfo

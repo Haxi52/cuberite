@@ -9,6 +9,8 @@ Server/CONTRIBUTORS
 Server/LICENSE
 Server/Licenses
 Server/itemblacklist
+Tools/MCADefrag/MCADefrag
+Tools/ProtoProxy/ProtoProxy
 Testing/
 ChunkWorxSave.ini
 doxy/
@@ -86,6 +88,7 @@ src/AllFiles.lst
 *.opensdf
 *.sdf
 *.sln
+*.opendb
 *.idb
 
 # cmake output folders

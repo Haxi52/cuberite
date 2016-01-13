@@ -513,7 +513,7 @@ bool cEntity::DoTakeDamage(TakeDamageInfo & a_TDI)
 			RemovedDamage += CeilC(EPFProtection * 0.04 * a_TDI.FinalDamage);
 		}
 
-		if ((a_TDI.DamageType == dtFalling) || (a_TDI.DamageType == dtFall) || (a_TDI.DamageType == dtEnderPearl))
+		if ((a_TDI.DamageType == dtFalling) || (a_TDI.DamageType == dtEnderPearl))
 		{
 			RemovedDamage += CeilC(EPFFeatherFalling * 0.04 * a_TDI.FinalDamage);
 		}
@@ -1029,16 +1029,17 @@ void cEntity::HandlePhysics(std::chrono::milliseconds a_Dt, cChunk & a_Chunk)
 					NextSpeed.z = 0.0f;
 				}
 
-				if (Tracer.HitNormal.y == 1.0f)  // Hit BLOCK_FACE_YP, we are on the ground
-				{
-					m_bOnGround = true;
-				}
-
 				// Now, set our position to the hit block (i.e. move part way along our intended trajectory)
 				NextPos.Set(Tracer.RealHit.x, Tracer.RealHit.y, Tracer.RealHit.z);
 				NextPos.x += Tracer.HitNormal.x * 0.1;
 				NextPos.y += Tracer.HitNormal.y * 0.05;
 				NextPos.z += Tracer.HitNormal.z * 0.1;
+
+				if (Tracer.HitNormal.y == 1.0f)  // Hit BLOCK_FACE_YP, we are on the ground
+				{
+					m_bOnGround = true;
+					NextPos.y = FloorC(NextPos.y);  // we clamp the height to 0 cos otherwise we'll constantly be slightly above the block
+				}
 			}
 			else
 			{
@@ -1104,7 +1105,7 @@ void cEntity::TickBurning(cChunk & a_Chunk)
 		m_TicksSinceLastBurnDamage++;
 		if (m_TicksSinceLastBurnDamage >= BURN_TICKS_PER_DAMAGE)
 		{
-			if (!m_IsFireproof)
+			if (!IsFireproof())
 			{
 				TakeDamage(dtOnFire, nullptr, BURN_DAMAGE, 0);
 			}
@@ -1119,7 +1120,7 @@ void cEntity::TickBurning(cChunk & a_Chunk)
 	int MinRelZ = FloorC(GetPosZ() - m_Width / 2) - a_Chunk.GetPosZ() * cChunkDef::Width;
 	int MaxRelZ = FloorC(GetPosZ() + m_Width / 2) - a_Chunk.GetPosZ() * cChunkDef::Width;
 	int MinY = Clamp(POSY_TOINT, 0, cChunkDef::Height - 1);
-	int MaxY = Clamp(CeilC(GetPosY() + m_Height), 0, cChunkDef::Height - 1);
+	int MaxY = Clamp(FloorC(GetPosY() + m_Height), 0, cChunkDef::Height - 1);
 	bool HasWater = false;
 	bool HasLava = false;
 	bool HasFire = false;
@@ -1175,7 +1176,7 @@ void cEntity::TickBurning(cChunk & a_Chunk)
 		m_TicksSinceLastLavaDamage++;
 		if (m_TicksSinceLastLavaDamage >= LAVA_TICKS_PER_DAMAGE)
 		{
-			if (!m_IsFireproof)
+			if (!IsFireproof())
 			{
 				TakeDamage(dtLavaContact, nullptr, LAVA_DAMAGE, 0);
 			}
@@ -1196,7 +1197,7 @@ void cEntity::TickBurning(cChunk & a_Chunk)
 		m_TicksSinceLastFireDamage++;
 		if (m_TicksSinceLastFireDamage >= FIRE_TICKS_PER_DAMAGE)
 		{
-			if (!m_IsFireproof)
+			if (!IsFireproof())
 			{
 				TakeDamage(dtFireContact, nullptr, FIRE_DAMAGE, 0);
 			}
@@ -1343,7 +1344,7 @@ bool cEntity::DetectPortal()
 					TargetPos.x *= 8.0;
 					TargetPos.z *= 8.0;
 
-					cWorld * TargetWorld = cRoot::Get()->CreateAndInitializeWorld(GetWorld()->GetLinkedOverworldName(), dimNether, GetWorld()->GetName(), false);
+					cWorld * TargetWorld = cRoot::Get()->CreateAndInitializeWorld(GetWorld()->GetLinkedOverworldName(), dimNether, GetWorld()->GetName(), true);
 					LOGD("Jumping nether -> overworld");
 					new cNetherPortalScanner(this, TargetWorld, TargetPos, 256);
 					return true;
@@ -1367,7 +1368,7 @@ bool cEntity::DetectPortal()
 					TargetPos.x /= 8.0;
 					TargetPos.z /= 8.0;
 
-					cWorld * TargetWorld = cRoot::Get()->CreateAndInitializeWorld(GetWorld()->GetLinkedNetherWorldName(), dimNether, GetWorld()->GetName(), false);
+					cWorld * TargetWorld = cRoot::Get()->CreateAndInitializeWorld(GetWorld()->GetLinkedNetherWorldName(), dimNether, GetWorld()->GetName(), true);
 					LOGD("Jumping overworld -> nether");
 					new cNetherPortalScanner(this, TargetWorld, TargetPos, 128);
 					return true;

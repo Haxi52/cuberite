@@ -16,6 +16,7 @@ extern "C"
 #include "Bindings.h"
 #include "ManualBindings.h"
 #include "DeprecatedBindings.h"
+#include "LuaJson.h"
 #include "../Entities/Entity.h"
 #include "../BlockEntities/BlockEntity.h"
 
@@ -37,6 +38,76 @@ extern "C"
 
 
 const cLuaState::cRet cLuaState::Return = {};
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// cLuaStateTracker:
+
+void cLuaStateTracker::Add(cLuaState & a_LuaState)
+{
+	auto & Instance = Get();
+	cCSLock Lock(Instance.m_CSLuaStates);
+	Instance.m_LuaStates.push_back(&a_LuaState);
+}
+
+
+
+
+void cLuaStateTracker::Del(cLuaState & a_LuaState)
+{
+	auto & Instance = Get();
+	cCSLock Lock(Instance.m_CSLuaStates);
+	Instance.m_LuaStates.erase(
+		std::remove_if(
+			Instance.m_LuaStates.begin(), Instance.m_LuaStates.end(),
+			[&a_LuaState](cLuaStatePtr a_StoredLuaState)
+			{
+				return (&a_LuaState == a_StoredLuaState);
+			}
+		),
+		Instance.m_LuaStates.end()
+	);
+}
+
+
+
+
+
+AString cLuaStateTracker::GetStats(void)
+{
+	auto & Instance = Get();
+	cCSLock Lock(Instance.m_CSLuaStates);
+	AString res;
+	int Total = 0;
+	for (auto state: Instance.m_LuaStates)
+	{
+		int Mem = 0;
+		if (!state->Call("collectgarbage", "count", cLuaState::Return, Mem))
+		{
+			res.append(Printf("Cannot query memory for state \"%s\"\n", state->GetSubsystemName().c_str()));
+		}
+		else
+		{
+			res.append(Printf("State \"%s\" is using %d KiB of memory\n", state->GetSubsystemName().c_str(), Mem));
+			Total += Mem;
+		}
+	}
+	res.append(Printf("Total memory used by Lua: %d KiB\n", Total));
+	return res;
+}
+
+
+
+
+
+cLuaStateTracker & cLuaStateTracker::Get(void)
+{
+	static cLuaStateTracker Inst;  // The singleton
+	return Inst;
+}
 
 
 
@@ -98,6 +169,7 @@ void cLuaState::Create(void)
 	m_LuaState = lua_open();
 	luaL_openlibs(m_LuaState);
 	m_IsOwned = true;
+	cLuaStateTracker::Add(*this);
 }
 
 
@@ -109,6 +181,7 @@ void cLuaState::RegisterAPILibs(void)
 	tolua_AllToLua_open(m_LuaState);
 	cManualBindings::Bind(m_LuaState);
 	DeprecatedBindings::Bind(m_LuaState);
+	cLuaJson::Bind(*this);
 	luaopen_lsqlite3(m_LuaState);
 	luaopen_lxp(m_LuaState);
 }
@@ -133,6 +206,7 @@ void cLuaState::Close(void)
 		Detach();
 		return;
 	}
+	cLuaStateTracker::Del(*this);
 	lua_close(m_LuaState);
 	m_LuaState = nullptr;
 	m_IsOwned = false;
@@ -214,7 +288,7 @@ void cLuaState::AddPackagePath(const AString & a_PathVariable, const AString & a
 bool cLuaState::LoadFile(const AString & a_FileName, bool a_LogWarnings)
 {
 	ASSERT(IsValid());
-	
+
 	// Load the file:
 	int s = luaL_loadfile(m_LuaState, a_FileName.c_str());
 	if (s != 0)
@@ -238,7 +312,42 @@ bool cLuaState::LoadFile(const AString & a_FileName, bool a_LogWarnings)
 		lua_pop(m_LuaState, 1);
 		return false;
 	}
-	
+
+	return true;
+}
+
+
+
+
+
+bool cLuaState::LoadString(const AString & a_StringToLoad, const AString & a_FileName, bool a_LogWarnings)
+{
+	ASSERT(IsValid());
+
+	// Load the file:
+	int s = luaL_loadstring(m_LuaState, a_StringToLoad.c_str());
+	if (s != 0)
+	{
+		if (a_LogWarnings)
+		{
+			LOGWARNING("Can't load %s because of a load error in string from \"%s\": %d (%s)", m_SubsystemName.c_str(), a_FileName.c_str(), s, lua_tostring(m_LuaState, -1));
+		}
+		lua_pop(m_LuaState, 1);
+		return false;
+	}
+
+	// Execute the globals:
+	s = lua_pcall(m_LuaState, 0, LUA_MULTRET, 0);
+	if (s != 0)
+	{
+		if (a_LogWarnings)
+		{
+			LOGWARNING("Can't load %s because of an initialization error in string from \"%s\": %d (%s)", m_SubsystemName.c_str(), a_FileName.c_str(), s, lua_tostring(m_LuaState, -1));
+		}
+		lua_pop(m_LuaState, 1);
+		return false;
+	}
+
 	return true;
 }
 
@@ -700,25 +809,6 @@ void cLuaState::Push(UInt32 a_Value)
 
 
 
-void cLuaState::Push(void * a_Ptr)
-{
-	UNUSED(a_Ptr);
-	ASSERT(IsValid());
-
-	// Investigate the cause of this - what is the callstack?
-	// One code path leading here is the OnHookExploding / OnHookExploded with exotic parameters. Need to decide what to do with them
-	LOGWARNING("Lua engine: attempting to push a plain pointer, pushing nil instead.");
-	LOGWARNING("This indicates an unimplemented part of MCS bindings");
-	LogStackTrace();
-	
-	lua_pushnil(m_LuaState);
-	m_NumCurrentFunctionArgs += 1;
-}
-
-
-
-
-
 void cLuaState::Push(std::chrono::milliseconds a_Value)
 {
 	ASSERT(IsValid());
@@ -726,20 +816,6 @@ void cLuaState::Push(std::chrono::milliseconds a_Value)
 	tolua_pushnumber(m_LuaState, static_cast<lua_Number>(a_Value.count()));
 	m_NumCurrentFunctionArgs += 1;
 }
-
-
-
-
-
-/*
-void cLuaState::PushUserType(void * a_Object, const char * a_Type)
-{
-	ASSERT(IsValid());
-
-	tolua_pushusertype(m_LuaState, a_Object, a_Type);
-	m_NumCurrentFunctionArgs += 1;
-}
-*/
 
 
 
@@ -880,6 +956,43 @@ cLuaState::cStackValue cLuaState::WalkToValue(const AString & a_Name)
 		// Remove the previous value from the stack (keep only the new one):
 		lua_remove(m_LuaState, -2);
 	}  // for elem - path[]
+	if (lua_isnil(m_LuaState, -1))
+	{
+		lua_pop(m_LuaState, 1);
+		return cStackValue();
+	}
+	return cStackValue(*this);
+}
+
+
+
+
+
+cLuaState::cStackValue cLuaState::WalkToNamedGlobal(const AString & a_Name)
+{
+	// Iterate over path and replace the top of the stack with the walked element
+	lua_getglobal(m_LuaState, "_G");
+	auto path = StringSplit(a_Name, ".");
+	for (const auto & elem: path)
+	{
+		// If the value is not a table, bail out (error):
+		if (!lua_istable(m_LuaState, -1))
+		{
+			lua_pop(m_LuaState, 1);
+			return cStackValue();
+		}
+
+		// Get the next part of the path:
+		lua_getfield(m_LuaState, -1, elem.c_str());
+
+		// Remove the previous value from the stack (keep only the new one):
+		lua_remove(m_LuaState, -2);
+	}  // for elem - path[]
+	if (lua_isnil(m_LuaState, -1))
+	{
+		lua_pop(m_LuaState, 1);
+		return cStackValue();
+	}
 	return cStackValue(*this);
 }
 
@@ -1053,6 +1166,39 @@ bool cLuaState::CheckParamNumber(int a_StartParam, int a_EndParam)
 
 
 
+bool cLuaState::CheckParamBool(int a_StartParam, int a_EndParam)
+{
+	ASSERT(IsValid());
+	
+	if (a_EndParam < 0)
+	{
+		a_EndParam = a_StartParam;
+	}
+	
+	tolua_Error tolua_err;
+	for (int i = a_StartParam; i <= a_EndParam; i++)
+	{
+		if (tolua_isboolean(m_LuaState, i, 0, &tolua_err))
+		{
+			continue;
+		}
+		// Not the correct parameter
+		lua_Debug entry;
+		VERIFY(lua_getstack(m_LuaState, 0,   &entry));
+		VERIFY(lua_getinfo (m_LuaState, "n", &entry));
+		AString ErrMsg = Printf("#ferror in function '%s'.", (entry.name != nullptr) ? entry.name : "?");
+		tolua_error(m_LuaState, ErrMsg.c_str(), &tolua_err);
+		return false;
+	}  // for i - Param
+	
+	// All params checked ok
+	return true;
+}
+
+
+
+
+
 bool cLuaState::CheckParamString(int a_StartParam, int a_EndParam)
 {
 	ASSERT(IsValid());
@@ -1065,7 +1211,7 @@ bool cLuaState::CheckParamString(int a_StartParam, int a_EndParam)
 	tolua_Error tolua_err;
 	for (int i = a_StartParam; i <= a_EndParam; i++)
 	{
-		if (tolua_isstring(m_LuaState, i, 0, &tolua_err))
+		if (lua_isstring(m_LuaState, i))
 		{
 			continue;
 		}
@@ -1073,6 +1219,9 @@ bool cLuaState::CheckParamString(int a_StartParam, int a_EndParam)
 		lua_Debug entry;
 		VERIFY(lua_getstack(m_LuaState, 0,   &entry));
 		VERIFY(lua_getinfo (m_LuaState, "n", &entry));
+		tolua_err.array = 0;
+		tolua_err.type = "string";
+		tolua_err.index = i;
 		AString ErrMsg = Printf("#ferror in function '%s'.", (entry.name != nullptr) ? entry.name : "?");
 		tolua_error(m_LuaState, ErrMsg.c_str(), &tolua_err);
 		return false;

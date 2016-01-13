@@ -1,12 +1,13 @@
 
 cmake_minimum_required (VERSION 2.6)
-project (MCServer)
+project (Cuberite)
 
 include_directories ("${PROJECT_SOURCE_DIR}/../")
 
 SET (SRCS
 	BeaconEntity.cpp
 	BlockEntity.cpp
+	BrewingstandEntity.cpp
 	ChestEntity.cpp
 	CommandBlockEntity.cpp
 	DispenserEntity.cpp
@@ -27,6 +28,7 @@ SET (HDRS
 	BeaconEntity.h
 	BlockEntity.h
 	BlockEntityWithItems.h
+	BrewingstandEntity.h
 	ChestEntity.h
 	CommandBlockEntity.h
 	DispenserEntity.h
@@ -40,7 +42,6 @@ SET (HDRS
 	MobHeadEntity.h
 	MobSpawnerEntity.h
 	NoteEntity.h
-	RedstonePoweredEntity.h
 	SignEntity.h
 )
 

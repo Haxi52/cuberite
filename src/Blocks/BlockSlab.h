@@ -174,6 +174,15 @@ public:
 			}
 		}
 	}
+
+	virtual bool IsInsideBlock(const Vector3d & a_Position, const BLOCKTYPE a_BlockType, const NIBBLETYPE a_BlockMeta) override
+	{
+		if (a_BlockMeta & 0x8)  // top half
+		{
+			return true;
+		}
+		return cBlockHandler::IsInsideBlock(a_Position, a_BlockType, a_BlockMeta);
+	}
 } ;
 
 
@@ -201,7 +210,7 @@ public:
 		{
 			case E_BLOCK_DOUBLE_STONE_SLAB: return E_BLOCK_STONE_SLAB;
 			case E_BLOCK_DOUBLE_WOODEN_SLAB: return E_BLOCK_WOODEN_SLAB;
-			case E_BLOCK_DOUBLE_RED_SANDSTONE_SLAB: return E_BLOCK_DOUBLE_RED_SANDSTONE_SLAB;
+			case E_BLOCK_DOUBLE_RED_SANDSTONE_SLAB: return E_BLOCK_RED_SANDSTONE_SLAB;
 		}
 		ASSERT(!"Unhandled double slab type!");
 		return a_BlockType;

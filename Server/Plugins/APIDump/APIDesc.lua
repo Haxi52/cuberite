@@ -399,6 +399,7 @@ g_APIDesc =
 				CanBeTerraformed = { Params = "Type", Return = "bool", Notes = "(STATIC) Returns true if the block is suitable to be changed by a generator" },
 				FullyOccupiesVoxel = { Params = "Type", Return = "bool", Notes = "(STATIC) Returns whether the specified block fully occupies its voxel." },
 				Get = { Params = "Type", Return = "{{cBlockInfo}}", Notes = "(STATIC) Returns the {{cBlockInfo}} structure for the specified type." },
+				GetBlockHeight = { Params = "Type", Return = "number", Notes = "(STATIC) Returns the block's hitbox height." },
 				GetLightValue = { Params = "Type", Return = "number", Notes = "(STATIC) Returns how much light the specified block emits on its own." },
 				GetPlaceSound = { Params = "Type", Return = "", Notes = "(STATIC) Returns the name of the sound that is played when placing the block." },
 				GetSpreadLightFalloff = { Params = "Type", Return = "number", Notes = "(STATIC) Returns how much light the specified block consumes." },
@@ -1371,53 +1372,6 @@ local Item5 = cItem(E_ITEM_DIAMOND_CHESTPLATE, 1, 0, "thorns=1;unbreaking=3");
 			},
 		},  -- cItem
 
-		cObjective =
-		{
-			Desc = [[
-				This class represents a single scoreboard objective.
-			]],
-			Functions =
-			{
-				AddScore = { Params = "string, number", Return = "Score", Notes = "Adds a value to the score of the specified player and returns the new value." },
-				GetDisplayName = { Params = "", Return = "string", Notes = "Returns the display name of the objective. This name will be shown to the connected players." },
-				GetName = { Params = "", Return = "string", Notes = "Returns the internal name of the objective." },
-				GetScore = { Params = "string", Return = "Score", Notes = "Returns the score of the specified player." },
-				GetType = { Params = "", Return = "eType", Notes = "Returns the type of the objective. (i.e what is being tracked)" },
-				Reset = { Params = "", Return = "", Notes = "Resets the scores of the tracked players." },
-				ResetScore = { Params = "string", Return = "", Notes = "Reset the score of the specified player." },
-				SetDisplayName = { Params = "string", Return = "", Notes = "Sets the display name of the objective." },
-				SetScore = { Params = "string, Score", Return = "", Notes = "Sets the score of the specified player." },
-				SubScore = { Params = "string, number", Return = "Score", Notes = "Subtracts a value from the score of the specified player and returns the new value." },
-			},
-			Constants =
-			{
-				otAchievement = { Notes = "" },
-				otDeathCount = { Notes = "" },
-				otDummy = { Notes = "" },
-				otHealth = { Notes = "" },
-				otPlayerKillCount = { Notes = "" },
-				otStat = { Notes = "" },
-				otStatBlockMine = { Notes = "" },
-				otStatEntityKill = { Notes = "" },
-				otStatEntityKilledBy = { Notes = "" },
-				otStatItemBreak = { Notes = "" },
-				otStatItemCraft = { Notes = "" },
-				otStatItemUse = { Notes = "" },
-				otTotalKillCount = { Notes = "" },
-			},
-		}, -- cObjective
-
-		cPainting =
-		{
-			Desc = "This class represents a painting in the world. These paintings are special and different from Vanilla in that they can be critical-hit.",
-			Functions =
-			{
-				GetDirection = { Params = "", Return = "number", Notes = "Returns the direction the painting faces. Directions: ZP - 0, ZM - 2, XM - 1, XP - 3. Note that these are not the BLOCK_FACE constants." },
-				GetName = { Params = "", Return = "string", Notes = "Returns the name of the painting" },
-			},
-
-		}, -- cPainting
-
 		cItemGrid =
 		{
 			Desc = [[This class represents a 2D array of items. It is used as the underlying storage and API for all cases that use a grid of items:
@@ -1550,8 +1504,69 @@ end
 					{ Params = "Index, ItemType, ItemCount, ItemDamage", Return = "", Notes = "Sets the item at the specified index to the specified item" },
 				},
 				Size = { Params = "", Return = "number", Notes = "Returns the number of items in the collection" },
+				Contains = { Params = "{{cItem|cItem}}", Return = "bool", Notes = "Returns true if the collection contains an item that is fully equivalent to the parameter" },
+				ContainsType = { Params = "{{cItem|cItem}}", Return = "bool", Notes = "Returns true if the collection contains an item that is the same type as the parameter" },
 			},
 		},  -- cItems
+
+		cJson =
+		{
+			Desc = [[
+				Exposes the Json parser and serializer available in the server. Plugins can parse Json strings into
+				Lua tables, and serialize Lua tables into Json strings easily.
+			]],
+			Functions =
+			{
+				Parse = { Params = "string", Return = "table", Notes = "Parses the Json in the input string into a Lua table. Returns nil and detailed error message if parsing fails." },
+				Serialize = { Params = "table, [options]", Return = "string", Notes = "Serializes the input table into a Json string. The options table, if present, is used to adjust the formatting of the serialized string, see below for details." },
+			},
+			AdditionalInfo =
+			{
+				{
+					Header = "Serializer options",
+					Contents = [[
+						The "options" parameter given to the cJson:Serialize() function is a dictionary-table of "option
+						name" -> "option value". The serializer warns if any unknown options are used; the following
+						options are recognized:</p>
+						<ul>
+						<li><b>commentStyle</b> - either "All" or "None", specifies whether comments are written to the
+						output. Currently unused since comments cannot be represented in a Lua table</li>
+						<li><b>indentation</b> - the string that is repeated for each level of indentation of the output.
+						If empty, the Json is compressed (without linebreaks).</li>
+						<li><b>enableYAMLCompatibility</b> - bool manipulating the whitespace around the colons.</li>
+						<li><b>dropNullPlaceholders</b> - bool specifying whether null placeholders should be dropped
+						from the output</li>
+						</ul>
+					]],
+				},
+				{
+					Header = "Code example: Parsing a Json string",
+					Contents = [==[
+						The following code, adapted from the Debuggers plugin, parses a simple Json string and verifies
+						the results:
+<pre class="prettyprint lang-lua">
+local t1 = cJson:Parse([[{"a": 1, "b": "2", "c": [3, "4", 5]}]])
+assert(t1.a == 1)
+assert(t1.b == "2")
+assert(t1.c[1] == 3)
+assert(t1.c[2] == "4")
+assert(t1.c[3] == 5)
+</pre>
+					]==],
+				},
+				{
+					Header = "Code example: Serializing into a Json string",
+					Contents = [==[
+						The following code, adapted from the Debuggers plugin, serializes a simple Lua table into a
+						string, using custom indentation:
+<pre class="prettyprint lang-lua">
+local s1 = cJson:Serialize({a = 1, b = "2", c = {3, "4", 5}}, {indentation = "  "})
+LOG("Serialization result: " .. (s1 or "<nil>"))
+</pre>
+					]==],
+				},
+			},
+		},  -- cJson
 
 		cLuaWindow =
 		{
@@ -1810,6 +1825,52 @@ a_Player:OpenWindow(Window);
 			Inherits = "cPawn",
 		},  -- cMonster
 
+		cObjective =
+		{
+			Desc = [[
+				This class represents a single scoreboard objective.
+			]],
+			Functions =
+			{
+				AddScore = { Params = "string, number", Return = "Score", Notes = "Adds a value to the score of the specified player and returns the new value." },
+				GetDisplayName = { Params = "", Return = "string", Notes = "Returns the display name of the objective. This name will be shown to the connected players." },
+				GetName = { Params = "", Return = "string", Notes = "Returns the internal name of the objective." },
+				GetScore = { Params = "string", Return = "Score", Notes = "Returns the score of the specified player." },
+				GetType = { Params = "", Return = "eType", Notes = "Returns the type of the objective. (i.e what is being tracked)" },
+				Reset = { Params = "", Return = "", Notes = "Resets the scores of the tracked players." },
+				ResetScore = { Params = "string", Return = "", Notes = "Reset the score of the specified player." },
+				SetDisplayName = { Params = "string", Return = "", Notes = "Sets the display name of the objective." },
+				SetScore = { Params = "string, Score", Return = "", Notes = "Sets the score of the specified player." },
+				SubScore = { Params = "string, number", Return = "Score", Notes = "Subtracts a value from the score of the specified player and returns the new value." },
+			},
+			Constants =
+			{
+				otAchievement = { Notes = "" },
+				otDeathCount = { Notes = "" },
+				otDummy = { Notes = "" },
+				otHealth = { Notes = "" },
+				otPlayerKillCount = { Notes = "" },
+				otStat = { Notes = "" },
+				otStatBlockMine = { Notes = "" },
+				otStatEntityKill = { Notes = "" },
+				otStatEntityKilledBy = { Notes = "" },
+				otStatItemBreak = { Notes = "" },
+				otStatItemCraft = { Notes = "" },
+				otStatItemUse = { Notes = "" },
+				otTotalKillCount = { Notes = "" },
+			},
+		}, -- cObjective
+
+		cPainting =
+		{
+			Desc = "This class represents a painting in the world. These paintings are special and different from Vanilla in that they can be critical-hit.",
+			Functions =
+			{
+				GetDirection = { Params = "", Return = "number", Notes = "Returns the direction the painting faces. Directions: ZP - 0, ZM - 2, XM - 1, XP - 3. Note that these are not the BLOCK_FACE constants." },
+				GetName = { Params = "", Return = "string", Notes = "Returns the name of the painting" },
+			},
+		}, -- cPainting
+
 		cPawn =
 		{
 			Desc = [[cPawn is a controllable pawn object, controlled by either AI or a player. cPawn inherits all functions and members of {{cEntity}}
@@ -1822,8 +1883,9 @@ a_Player:OpenWindow(Window);
 				TakeDamage = { Return = "" },
 				KilledBy = { Return = "" },
 				GetHealth = { Return = "number" },
-				AddEntityEffect = { Params = "EffectType, {{cEntityEffect}}", Return = "", Notes = "Applies an entity effect" },
-				RemoveEntityEffect = { Params = "EffectType", Return = "", Notes = "Removes a currently applied entity effect" },
+				AddEntityEffect = { Params = "{{cEntityEffect|EffectType}}", Return = "", Notes = "Applies an entity effect" },
+				RemoveEntityEffect = { Params = "{{cEntityEffect|EffectType}}", Return = "", Notes = "Removes a currently applied entity effect" },
+				HasEntityEffect = { Return = "bool", Params = "{{cEntityEffect|EffectType}}", Notes = "Returns true, if the supplied entity effect type is currently applied" },
 				ClearEntityEffects = { Return = "", Notes = "Removes all currently applied entity effects" },
 			},
 			Inherits = "cEntity",
@@ -1866,6 +1928,7 @@ a_Player:OpenWindow(Window);
 				Feed = { Params = "AddFood, AddSaturation", Return = "bool", Notes = "Tries to add the specified amounts to food level and food saturation level (only positive amounts expected). Returns true if player was hungry and the food was consumed, false if too satiated." },
 				FoodPoison = { Params = "NumTicks", Return = "", Notes = "Starts the food poisoning for the specified amount of ticks; if already foodpoisoned, sets FoodPoisonedTicksRemaining to the larger of the two" },
 				ForceSetSpeed = { Params = "{{Vector3d|Direction}}", Notes = "Forces the player to move to the given direction." },
+				Freeze = { Params = "{{Vector3d|Location}}", Return = "", Notes = "Teleports the player to \"Location\" and prevents them from moving, locking them in place until unfreeze() is called" },
 				GetClientHandle = { Params = "", Return = "{{cClientHandle}}", Notes = "Returns the client handle representing the player's connection. May be nil (AI players)." },
 				GetColor = { Return = "string", Notes = "Returns the full color code to be used for this player's messages (based on their rank). Prefix player messages with this code." },
 				GetCurrentXp = { Params = "", Return = "number", Notes = "Returns the current amount of XP" },
@@ -1881,6 +1944,7 @@ a_Player:OpenWindow(Window);
 				GetFoodPoisonedTicksRemaining = { Params = "", Return = "", Notes = "Returns the number of ticks left for the food posoning effect" },
 				GetFoodSaturationLevel = { Params = "", Return = "number", Notes = "Returns the food saturation (overcharge of the food level, is depleted before food level)" },
 				GetFoodTickTimer = { Params = "", Return = "", Notes = "Returns the number of ticks past the last food-based heal or damage action; when this timer reaches 80, a new heal / damage is applied." },
+				GetFrozenDuration = { Params = "", Return = "number", Notes = "Returns the number of ticks since the player was frozen" },
 				GetGameMode = { Return = "{{Globals#GameMode|GameMode}}", Notes = "Returns the player's gamemode. The player may have their gamemode unassigned, in which case they inherit the gamemode from the current {{cWorld|world}}.<br /> <b>NOTE:</b> Instead of comparing the value returned by this function to the gmXXX constants, use the IsGameModeXXX() functions. These functions handle the gamemode inheritance automatically."},
 				GetIP = { Return = "string", Notes = "Returns the IP address of the player, if available. Returns an empty string if there's no IP to report."},
 				GetInventory = { Return = "{{cInventory|Inventory}}", Notes = "Returns the player's inventory"},
@@ -1913,6 +1977,7 @@ a_Player:OpenWindow(Window);
 				IsGameModeSurvival = { Params = "", Return = "bool", Notes = "Returns true if the player is in the gmSurvival gamemode, or has their gamemode unset and the world is a gmSurvival world." },
 				IsInBed = { Params = "", Return = "bool", Notes = "Returns true if the player is currently lying in a bed." },
 				IsSatiated = { Params = "", Return = "bool", Notes = "Returns true if the player is satiated (cannot eat)." },
+				IsFrozen = { Params = "", Return = "bool", Notes = "Returns true if the player is frozen. See Freeze()" },
 				IsVisible = { Params = "", Return = "bool", Notes = "Returns true if the player is visible to other players" },
 				LoadRank = { Params = "", Return = "", Notes = "Reloads the player's rank, message visuals and permissions from the {{cRankManager}}, based on the player's current rank." },
 				MoveTo = { Params = "{{Vector3d|NewPosition}}", Return = "Tries to move the player into the specified position." },
@@ -1955,6 +2020,7 @@ a_Player:OpenWindow(Window);
 				TossEquippedItem = { Params = "[Amount]", Return = "", Notes = "Tosses the item that the player has selected in their hotbar. Amount defaults to 1." },
 				TossHeldItem = { Params = "[Amount]", Return = "", Notes = "Tosses the item held by the cursor, then the player is in a UI window. Amount defaults to 1." },
 				TossPickup = { Params = "{{cItem|Item}}", Return = "", Notes = "Tosses a pickup newly created from the specified item." },
+				Unfreeze = { Params = "", Return = "", Notes = "Allows the player to move again, canceling the effects of Freeze()" },
 				XpForLevel = { Params = "XPLevel", Return = "number", Notes = "(STATIC) Returns the total amount of XP needed for the specified XP level. Inverse of CalcLevelFromXp()." },
 			},
 			Constants =
@@ -2066,6 +2132,7 @@ a_Player:OpenWindow(Window);
 				ForEachPlayer = { Params = "CallbackFunction", Return = "", Notes = "Calls the given callback function for each player. The callback function has the following signature: <pre class=\"prettyprint lang-lua\">function Callback({{cPlayer|cPlayer}})</pre>" },
 				ForEachWorld = { Params = "CallbackFunction", Return = "", Notes = "Calls the given callback function for each world. The callback function has the following signature: <pre class=\"prettyprint lang-lua\">function Callback({{cWorld|cWorld}})</pre>" },
 				Get = { Params = "", Return = "Root object", Notes = "(STATIC) This function returns the cRoot object." },
+				GetBrewingRecipe = { Params = "{{cItem|cItem}}, {{cItem|cItem}}", Return = "{{cItem|cItem}}", Notes = "(STATIC) Returns the result item, if a recipe has been found. If no recipe is found, returns no value." },
 				GetBuildCommitID = { Params = "", Return = "string", Notes = "(STATIC) For official builds (Travis CI / Jenkins) it returns the exact commit hash used for the build. For unofficial local builds, returns the approximate commit hash (since the true one cannot be determined), formatted as \"approx: &lt;CommitHash&gt;\"." },
 				GetBuildDateTime = { Params = "", Return = "string", Notes = "(STATIC) For official builds (Travic CI / Jenkins) it returns the date and time of the build. For unofficial local builds, returns the approximate datetime of the commit (since the true one cannot be determined), formatted as \"approx: &lt;DateTime-iso8601&gt;\"." },
 				GetBuildID = { Params = "", Return = "string", Notes = "(STATIC) For official builds (Travis CI / Jenkins) it returns the unique ID of the build, as recognized by the build system. For unofficial local builds, returns the string \"Unknown\"." },
@@ -2223,7 +2290,50 @@ local CompressedString = cStringCompression.CompressStringGZIP("DataToCompress")
 				SetFuseTicks = { Return = "number", Notes = "Set the fuse ticks until the tnt will explode." },
 			},
 			Inherits = "cEntity",
-		},
+		},  -- cTNTEntity
+
+		cUrlParser =
+		{
+			Desc = [[
+			Provides a parser for generic URLs that returns the individual components of the URL.</p>
+			<p>
+			Note that all functions are static. Call them by using "cUrlParser:Parse(...)" etc.
+			]],
+			Functions =
+			{
+				GetDefaultPort = { Params = "Scheme", Return = "number", Notes = "(STATIC) Returns the default port that should be used for the given scheme (protocol). Returns zero if the scheme is not known." },
+				IsKnownScheme = { Params = "Scheme", Return = "bool", Notes = "(STATIC) Returns true if the scheme (protocol) is recognized by the parser." },
+				Parse = { Params = "URL", Return = "Scheme, Username, Password, Host, Port, Path, Query, Fragment", Notes = "(STATIC) Returns the individual parts of the URL. Parts that are not explicitly specified in the URL are empty, the default port for the scheme is used. If parsing fails, the function returns nil and an error message." },
+				ParseAuthorityPart = { Params = "AuthPart", Return = "Username, Password, Host, Port", Notes = "(STATIC) Parses the Authority part of the URL. Parts that are not explicitly specified in the AuthPart are returned empty, the port is returned zero. If parsing fails, the function returns nil and an error message." },
+			},
+			AdditionalInfo =
+			{
+				{
+					Header = "Code example",
+					Contents = [==[
+						The following code fragment uses the cUrlParser to parse an URL string into its components, and
+						prints those components out:
+<pre class="prettyprint lang-lua">
+local Scheme, Username, Password, Host, Port, Path, Query, Fragment = cUrlParser:Parse(
+	"http://anonymous:user@example.com@ftp.cuberite.org:9921/releases/2015/?sort=date#files"
+)
+if not(Scheme) then
+	LOG("  Error: " .. (username or "<nil>"))
+else
+	LOG("  Scheme   = " .. Scheme)    -- "http"
+	LOG("  Username = " .. Username)  -- "anonymous"
+	LOG("  Password = " .. Password)  -- "user@example.com"
+	LOG("  Host     = " .. Host)      -- "ftp.cuberite.org"
+	LOG("  Port     = " .. Port)      -- 9921
+	LOG("  Path     = " .. Path)      -- "releases/2015/"
+	LOG("  Query    = " .. Query)     -- "sort=date"
+	LOG("  Fragment = " .. Fragment)  -- "files"
+end
+</pre>
+					]==],
+				},
+			},
+		},  -- cUrlParser
 
 		cWebPlugin =
 		{
@@ -2322,7 +2432,7 @@ local CompressedString = cStringCompression.CompressStringGZIP("DataToCompress")
 				BroadcastChatSuccess = { Params = "Message, [{{cClientHandle|ExcludeClient}}]", Return = "", Notes = "Prepends Green [INFO] / colours entire text (depending on ShouldUseChatPrefixes()) and broadcasts message. For success messages." },
 				BroadcastChatWarning = { Params = "Message, [{{cClientHandle|ExcludeClient}}]", Return = "", Notes = "Prepends Rose [WARN] / colours entire text (depending on ShouldUseChatPrefixes()) and broadcasts message. For concerning events, such as plugin reload etc." },
 				BroadcastEntityAnimation = { Params = "{{cEntity|TargetEntity}}, Animation, [{{cClientHandle|ExcludeClient}}]", Return = "", Notes = "Sends an animation of an entity to all clienthandles (except ExcludeClient if given)" },
-				BroadcastParticleEffect = { Params = "ParticleName, X, Y, Z, OffSetX, OffSetY, OffSetZ, ParticleData, ParticleAmmount, [{{cClientHandle|ExcludeClient}}]", Return = "", Notes = "Spawns the specified particles to all players in the world exept the optional ExeptClient. A list of available particles by thinkofdeath can be found {{https://gist.github.com/thinkofdeath/5110835|Here}}" },
+				BroadcastParticleEffect = { Params = "ParticleName, X, Y, Z, OffSetX, OffSetY, OffSetZ, ParticleData, ParticleAmount, [{{cClientHandle|ExcludeClient}}]", Return = "", Notes = "Spawns the specified particles to all players in the world exept the optional ExeptClient. A list of available particles by thinkofdeath can be found {{https://gist.github.com/thinkofdeath/5110835|Here}}" },
 				BroadcastSoundEffect = { Params = "SoundName, X, Y, Z, Volume, Pitch, [{{cClientHandle|ExcludeClient}}]", Return = "", Notes = "Sends the specified sound effect to all players in this world, except the optional ExceptClient" },
 				BroadcastSoundParticleEffect = { Params = "EffectID, X, Y, Z, EffectData, [{{cClientHandle|ExcludeClient}}]", Return = "", Notes = "Sends the specified effect to all players in this world, except the optional ExceptClient" },
 				CastThunderbolt = { Params = "X, Y, Z", Return = "", Notes = "Creates a thunderbolt at the specified coords" },
@@ -2332,6 +2442,7 @@ local CompressedString = cStringCompression.CompressStringGZIP("DataToCompress")
 				DigBlock = { Params = "X, Y, Z", Return = "", Notes = "Replaces the specified block with air, without dropping the usual pickups for the block. Wakes up the simulators for the block and its neighbors." },
 				DoExplosionAt = { Params = "Force, X, Y, Z, CanCauseFire, Source, SourceData", Return = "", Notes = "Creates an explosion of the specified relative force in the specified position. If CanCauseFire is set, the explosion will set blocks on fire, too. The Source parameter specifies the source of the explosion, one of the esXXX constants. The SourceData parameter is specific to each source type, usually it provides more info about the source." },
 				DoWithBlockEntityAt = { Params = "BlockX, BlockY, BlockZ, CallbackFunction", Return = "bool", Notes = "If there is a block entity at the specified coords, calls the CallbackFunction with the {{cBlockEntity}} parameter representing the block entity. The CallbackFunction has the following signature: <pre class=\"prettyprint lang-lua\">function Callback({{cBlockEntity|BlockEntity}})</pre> The function returns false if there is no block entity, or if there is, it returns the bool value that the callback has returned. Use {{tolua}}.cast() to cast the Callback's BlockEntity parameter to the correct {{cBlockEntity}} descendant." },
+				DoWithBrewingstandAt = { Params = "BlockX, BlockY, BlockZ, CallbackFunction", Return = "bool", Notes = "If there is a brewingstand at the specified coords, calls the CallbackFunction with the {{cBrewingstandEntity}} parameter representing the brewingstand. The CallbackFunction has the following signature: <pre class=\"prettyprint lang-lua\">function Callback({{cBrewingstandEntity|cBrewingstandEntity}})</pre> The function returns false if there is no brewingstand, or if there is, it returns the bool value that the callback has returned." },
 				DoWithBeaconAt = { Params = "BlockX, BlockY, BlockZ, CallbackFunction", Return = "bool", Notes = "If there is a beacon at the specified coords, calls the CallbackFunction with the {{cBeaconEntity}} parameter representing the beacon. The CallbackFunction has the following signature: <pre class=\"prettyprint lang-lua\">function Callback({{cBeaconEntity|BeaconEntity}})</pre> The function returns false if there is no beacon, or if there is, it returns the bool value that the callback has returned." },
 				DoWithChestAt = { Params = "BlockX, BlockY, BlockZ, CallbackFunction", Return = "bool", Notes = "If there is a chest at the specified coords, calls the CallbackFunction with the {{cChestEntity}} parameter representing the chest. The CallbackFunction has the following signature: <pre class=\"prettyprint lang-lua\">function Callback({{cChestEntity|ChestEntity}})</pre> The function returns false if there is no chest, or if there is, it returns the bool value that the callback has returned." },
 				DoWithCommandBlockAt = { Params = "BlockX, BlockY, BlockZ, CallbackFunction", Return = "bool", Notes = "If there is a command block at the specified coords, calls the CallbackFunction with the {{cCommandBlockEntity}} parameter representing the command block. The CallbackFunction has the following signature: <pre class=\"prettyprint lang-lua\">function Callback({{cCommandBlockEntity|CommandBlockEntity}})</pre> The function returns false if there is no command block, or if there is, it returns the bool value that the callback has returned." },
@@ -2352,6 +2463,7 @@ local CompressedString = cStringCompression.CompressStringGZIP("DataToCompress")
 				},
 				FindAndDoWithPlayer = { Params = "PlayerName, CallbackFunction", Return = "bool", Notes = "Calls the given callback function for the player with the name best matching the name string provided.<br>This function is case-insensitive and will match partial names.<br>Returns false if player not found or there is ambiguity, true otherwise. The CallbackFunction has the following signature: <pre class=\"prettyprint lang-lua\">function Callback({{cPlayer|Player}})</pre>" },
 				ForEachBlockEntityInChunk = { Params = "ChunkX, ChunkZ, CallbackFunction", Return = "bool", Notes = "Calls the specified callback for each block entity in the chunk. Returns true if all block entities in the chunk have been processed (including when there are zero block entities), or false if the callback has aborted the enumeration by returning true. The CallbackFunction has the following signature: <pre class=\"prettyprint lang-lua\">function Callback({{cBlockEntity|BlockEntity}})</pre> The callback should return false or no value to continue with the next block entity, or true to abort the enumeration. Use {{tolua}}.cast() to cast the Callback's BlockEntity parameter to the correct {{cBlockEntity}} descendant." },
+				ForEachBrewingstandInChunk = { Params = "ChunkX, ChunkZ, CallbackFunction", Return = "bool", Notes = "Calls the specified callback for each brewingstand in the chunk. Returns true if all brewingstands in the chunk have been processed (including when there are zero brewingstands), or false if the callback has aborted the enumeration by returning true. The CallbackFunction has the following signature: <pre class=\"prettyprint lang-lua\">function Callback({{cBrewingstandEntity|cBrewingstandEntity}})</pre> The callback should return false or no value to continue with the next brewingstand, or true to abort the enumeration." },
 				ForEachChestInChunk = { Params = "ChunkX, ChunkZ, CallbackFunction", Return = "bool", Notes = "Calls the specified callback for each chest in the chunk. Returns true if all chests in the chunk have been processed (including when there are zero chests), or false if the callback has aborted the enumeration by returning true. The CallbackFunction has the following signature: <pre class=\"prettyprint lang-lua\">function Callback({{cChestEntity|ChestEntity}})</pre> The callback should return false or no value to continue with the next chest, or true to abort the enumeration." },
 				ForEachEntity = { Params = "CallbackFunction", Return = "bool", Notes = "Calls the specified callback for each entity in the loaded world. Returns true if all the entities have been processed (including when there are zero entities), or false if the callback function has aborted the enumeration by returning true. The callback function has the following signature: <pre class=\"prettyprint lang-lua\">function Callback({{cEntity|Entity}})</pre> The callback should return false or no value to continue with the next entity, or true to abort the enumeration." },
 				ForEachEntityInBox = { Params = "{{cBoundingBox|Box}}, CallbackFunction", Return = "bool", Notes = "Calls the specified callback for each entity in the specified bounding box. Returns true if all the entities have been processed (including when there are zero entities), or false if the callback function has aborted the enumeration by returning true. If any chunk within the bounding box is not valid, it is silently skipped without any notification. The callback function has the following signature: <pre class=\"prettyprint lang-lua\">function Callback({{cEntity|Entity}})</pre> The callback should return false or no value to continue with the next entity, or true to abort the enumeration." },
@@ -2395,6 +2507,7 @@ local CompressedString = cStringCompression.CompressStringGZIP("DataToCompress")
 				GetName = { Params = "", Return = "string", Notes = "Returns the name of the world, as specified in the settings.ini file." },
 				GetNumChunks = { Params = "", Return = "number", Notes = "Returns the number of chunks currently loaded." },
 				GetScoreBoard = { Params = "", Return = "{{cScoreBoard}}", Notes = "Returns the {{cScoreBoard|ScoreBoard}} object used by this world. " },
+				GetSeed = { Params = "", Return = "number", Notes = "Returns the seed of the world." },
 				GetSignLines = { Params = "BlockX, BlockY, BlockZ", Return = "IsValid, [Line1, Line2, Line3, Line4]", Notes = "Returns true and the lines of a sign at the specified coords, or false if there is no sign at the coords." },
 				GetSpawnX = { Params = "", Return = "number", Notes = "Returns the X coord of the default spawn" },
 				GetSpawnY = { Params = "", Return = "number", Notes = "Returns the Y coord of the default spawn" },
@@ -2851,6 +2964,18 @@ end
 				TrimString = {Params = "string", Return = "string", Notes = "Trims whitespace at both ends of the string"},
 				md5 = {Params = "string", Return = "string", Notes = "<b>OBSOLETE</b>, use the {{cCryptoHash}} functions instead.<br>Converts a string to a raw binary md5 hash."},
 			},
+			Constants =
+			{
+				esBed = { Notes = "A bed explosion. The SourceData param is the {{Vector3i|position}} of the bed." },
+				esEnderCrystal = { Notes = "An ender crystal entity explosion. The SourceData param is the {{cEntity|ender crystal entity}} object." },
+				esGhastFireball = { Notes = "A ghast fireball explosion. The SourceData param is the {{cGhastFireballEntity|ghast fireball entity}} object." },
+				esMonster = { Notes = "A monster explosion (creeper). The SourceData param is the {{cMonster|monster entity}} object." },
+				esOther = { Notes = "Any other explosion. The SourceData param is unused." },
+				esPlugin = { Notes = "An explosion started by a plugin, without any further information. The SourceData param is unused. "},
+				esPrimedTNT = { Notes = "A TNT explosion. The SourceData param is the {{cTNTEntity|TNT entity}} object."},
+				esWitherBirth = { Notes = "An explosion at a wither's birth. The SourceData param is the {{cMonster|wither entity}} object." },
+				esWitherSkull = { Notes = "A wither skull explosion. The SourceData param is the {{cWitherSkullEntity|wither skull entity}} object." },
+			},
 			ConstantGroups =
 			{
 				BlockTypes =
@@ -2954,7 +3079,7 @@ end
 						These constants are used to differentiate the various sources of explosions. They are used in
 						the {{OnExploded|HOOK_EXPLODED}} hook, {{OnExploding|HOOK_EXPLODING}} hook and in the
 						{{cWorld}}:DoExplosionAt() function. These constants also dictate the type of the additional
-						data provided with the explosions, such as the exploding {{cCreeper|creeper}} entity or the
+						data provided with the explosions, such as the exploding creeper {{cEntity|entity}} or the
 						{{Vector3i|coords}} of the exploding bed.
 					]],
 				},
@@ -3030,6 +3155,7 @@ end
 		"cHopperEntity.__cBlockEntityWindowOwner__",
 		"cLuaWindow.__cItemGrid__cListener__",
 		"Globals._CuberiteInternal_.*",  -- Ignore all internal Cuberite constants
+		"Globals.esMax",
 	},
 
 	IgnoreVariables =

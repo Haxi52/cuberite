@@ -200,10 +200,10 @@ void cProtocolRecognizer::SendDisconnect(const AString & a_Reason)
 		static const int Packet = 0xff;  // PACKET_DISCONNECT
 		SendData(reinterpret_cast<const char *>(&Packet), 1);  // WriteByte()
 
-		AString UTF16 = UTF8ToRawBEUTF16(a_Reason.c_str(), a_Reason.length());
-		static const u_short Size = htons(static_cast<u_short>(UTF16.size() / 2));
+		auto UTF16 = UTF8ToRawBEUTF16(a_Reason);
+		static const u_short Size = htons(static_cast<u_short>(UTF16.size()));
 		SendData(reinterpret_cast<const char *>(&Size), 2);      // WriteShort()
-		SendData(UTF16.data(), UTF16.size());  // WriteString()
+		SendData(reinterpret_cast<const char *>(UTF16.data()), UTF16.size() * sizeof(char16_t));  // WriteString()
 	}
 }
 
@@ -709,7 +709,7 @@ void cProtocolRecognizer::SendSoundEffect(const AString & a_SoundName, double a_
 
 
 
-void cProtocolRecognizer::SendSoundParticleEffect(int a_EffectID, int a_SrcX, int a_SrcY, int a_SrcZ, int a_Data)
+void cProtocolRecognizer::SendSoundParticleEffect(const EffectID a_EffectID, int a_SrcX, int a_SrcY, int a_SrcZ, int a_Data)
 {
 	ASSERT(m_Protocol != nullptr);
 	m_Protocol->SendSoundParticleEffect(a_EffectID, a_SrcX, a_SrcY, a_SrcZ, a_Data);

@@ -2,6 +2,8 @@
 #include "Globals.h"  // NOTE: MSVC stupidness requires this to be the same across all modules
 
 #include "Player.h"
+#include "Mobs/Wolf.h"
+#include "../BoundingBox.h"
 #include <unordered_map>
 #include "../ChatColor.h"
 #include "../Server.h"
@@ -55,8 +57,6 @@ cPlayer::cPlayer(cClientHandlePtr a_Client, const AString & a_PlayerName) :
 	m_FoodSaturationLevel(5.0),
 	m_FoodTickTimer(0),
 	m_FoodExhaustionLevel(0.0),
-	m_LastGroundHeight(0),
-	m_bTouchGround(false),
 	m_Stance(0.0),
 	m_Inventory(*this),
 	m_EnderChestContents(9, 3),
@@ -65,6 +65,7 @@ cPlayer::cPlayer(cClientHandlePtr a_Client, const AString & a_PlayerName) :
 	m_GameMode(eGameMode_NotSet),
 	m_IP(""),
 	m_ClientHandle(a_Client),
+	m_FreezeCounter(-1),
 	m_NormalMaxSpeed(1.0),
 	m_SprintingMaxSpeed(1.3),
 	m_FlyingMaxSpeed(1.0),
@@ -88,6 +89,8 @@ cPlayer::cPlayer(cClientHandlePtr a_Client, const AString & a_PlayerName) :
 	m_UUID((a_Client != nullptr) ? a_Client->GetUUID() : ""),
 	m_CustomName("")
 {
+	ASSERT(a_PlayerName.length() <= 16);  // Otherwise this player could crash many clients...
+
 	m_InventoryWindow = new cInventoryWindow(*this);
 	m_CurrentWindow = m_InventoryWindow;
 	m_InventoryWindow->OpenedByPlayer(*this);
@@ -114,6 +117,7 @@ cPlayer::cPlayer(cClientHandlePtr a_Client, const AString & a_PlayerName) :
 
 	m_LastGroundHeight = static_cast<float>(GetPosY());
 	m_Stance = GetPosY() + 1.62;
+	FreezeInternal(GetPosition(), false);  // Freeze. Will be unfrozen once the chunk is loaded
 
 	if (m_GameMode == gmNotSet)
 	{
@@ -222,8 +226,35 @@ void cPlayer::Tick(std::chrono::milliseconds a_Dt, cChunk & a_Chunk)
 
 	m_Stats.AddValue(statMinutesPlayed, 1);
 
+	// Handle a frozen player
+	if (m_IsFrozen)
+	{
+		m_FreezeCounter += 1;
+		if (!m_IsManuallyFrozen && a_Chunk.IsValid())
+		{
+			// If the player was automatically frozen, unfreeze if the chunk the player is inside is loaded
+			Unfreeze();
+		}
+		else
+		{
+			// If the player was externally / manually frozen (plugin, etc.) or if the chunk isn't loaded yet:
+			// 1. Set the location to m_FrozenPosition every tick.
+			// 2. Zero out the speed every tick.
+			// 3. Send location updates every 60 ticks.
+			SetPosition(m_FrozenPosition);
+			SetSpeed(0, 0, 0);
+			if (m_FreezeCounter % 60 == 0)
+			{
+				BroadcastMovementUpdate(m_ClientHandle.get());
+				m_ClientHandle->SendPlayerPosition();
+			}
+			return;
+		}
+	}
+
 	if (!a_Chunk.IsValid())
 	{
+		FreezeInternal(GetPosition(), false);
 		// This may happen if the cPlayer is created before the chunks have the chance of being loaded / generated (#83)
 		return;
 	}
@@ -449,83 +480,6 @@ void cPlayer::SetTouchGround(bool a_bTouchGround)
 	if (IsGameModeSpectator())  // You can fly through the ground in Spectator
 	{
 		return;
-	}
-
-	/* Not pretty looking, and is more suited to wherever server-sided collision detection is implemented.
-	The following condition sets on-ground-ness if
-		The player isn't swimming or flying (client hardcoded conditions) and
-		they're on a block (Y is exact) - ensure any they could be standing on (including on the edges) is solid or
-		they're on a slab (Y significand is 0.5) - ditto with slab check
-		they're on a snow layer (Y divisible by 0.125) - ditto with snow layer check
-	*/
-
-	static const auto HalfWidth = GetWidth() / 2;
-	static const auto EPS = 0.0001;
-	if (
-		!IsSwimming() && !IsFlying() &&
-		(
-			(
-				((GetPosY() >= 1) && ((GetPosY() - POSY_TOINT) <= EPS)) &&
-				(
-					cBlockInfo::IsSolid(GetWorld()->GetBlock((GetPosition() + Vector3d(0, -1, 0)).Floor())) ||
-					cBlockInfo::IsSolid(GetWorld()->GetBlock((GetPosition() + Vector3d(HalfWidth, -1, 0)).Floor())) ||
-					cBlockInfo::IsSolid(GetWorld()->GetBlock((GetPosition() + Vector3d(-HalfWidth, -1, 0)).Floor())) ||
-					cBlockInfo::IsSolid(GetWorld()->GetBlock((GetPosition() + Vector3d(0, -1, HalfWidth)).Floor())) ||
-					cBlockInfo::IsSolid(GetWorld()->GetBlock((GetPosition() + Vector3d(0, -1, -HalfWidth)).Floor()))
-				)
-			) ||
-			(
-			((GetPosY() >= POSY_TOINT) && ((GetPosY() - (POSY_TOINT + 0.5)) <= EPS)) &&
-				(
-					cBlockSlabHandler::IsAnySlabType(GetWorld()->GetBlock((GetPosition() + Vector3d(0, 0, 0)).Floor())) ||
-					cBlockSlabHandler::IsAnySlabType(GetWorld()->GetBlock((GetPosition() + Vector3d(HalfWidth, 0, 0)).Floor())) ||
-					cBlockSlabHandler::IsAnySlabType(GetWorld()->GetBlock((GetPosition() + Vector3d(-HalfWidth, 0, 0)).Floor())) ||
-					cBlockSlabHandler::IsAnySlabType(GetWorld()->GetBlock((GetPosition() + Vector3d(0, 0, HalfWidth)).Floor())) ||
-					cBlockSlabHandler::IsAnySlabType(GetWorld()->GetBlock((GetPosition() + Vector3d(0, 0, -HalfWidth)).Floor()))
-				)
-			) ||
-			(
-				(fmod(GetPosY(), 0.125) <= EPS) &&
-				(
-					(GetWorld()->GetBlock((GetPosition() + Vector3d(0, 0, 0)).Floor()) == E_BLOCK_SNOW) ||
-					(GetWorld()->GetBlock((GetPosition() + Vector3d(HalfWidth, 0, 0)).Floor()) == E_BLOCK_SNOW) ||
-					(GetWorld()->GetBlock((GetPosition() + Vector3d(-HalfWidth, 0, 0)).Floor()) == E_BLOCK_SNOW) ||
-					(GetWorld()->GetBlock((GetPosition() + Vector3d(0, 0, HalfWidth)).Floor()) == E_BLOCK_SNOW) ||
-					(GetWorld()->GetBlock((GetPosition() + Vector3d(0, 0, -HalfWidth)).Floor()) == E_BLOCK_SNOW)
-				)
-			)
-		)
-	)
-	{
-		auto Damage = static_cast<int>(m_LastGroundHeight - GetPosY() - 3.0);
-		if (Damage > 0)
-		{
-			// cPlayer makes sure damage isn't applied in creative, no need to check here
-			TakeDamage(dtFalling, nullptr, Damage, Damage, 0);
-
-			// Fall particles
-			Damage = std::min(15, Damage);
-			GetClientHandle()->SendParticleEffect(
-				"blockdust",
-				GetPosition(),
-				{ 0, 0, 0 },
-				(Damage - 1.f) * ((0.3f - 0.1f) / (15.f - 1.f)) + 0.1f,  // Map damage (1 - 15) to particle speed (0.1 - 0.3)
-				static_cast<int>((Damage - 1.f) * ((50.f - 20.f) / (15.f - 1.f)) + 20.f),  // Map damage (1 - 15) to particle quantity (20 - 50)
-				{ { GetWorld()->GetBlock(POS_TOINT - Vector3i(0, 1, 0)), 0 } }
-			);
-		}
-
-		m_bTouchGround = true;
-		m_LastGroundHeight = GetPosY();
-	}
-	else
-	{
-		m_bTouchGround = false;
-	}
-
-	if (IsFlying() || IsSwimming() || IsClimbing())
-	{
-		m_LastGroundHeight = GetPosY();
 	}
 
 	UNUSED(a_bTouchGround);
@@ -900,10 +854,47 @@ bool cPlayer::DoTakeDamage(TakeDamageInfo & a_TDI)
 		AddFoodExhaustion(0.3f);
 		SendHealth();
 
+		NotifyFriendlyWolves(a_TDI.Attacker);
 		m_Stats.AddValue(statDamageTaken, FloorC<StatValue>(a_TDI.FinalDamage * 10 + 0.5));
 		return true;
 	}
 	return false;
+}
+
+
+
+
+
+void cPlayer::NotifyFriendlyWolves(cEntity * a_Opponent)
+{
+	class LookForWolves : public cEntityCallback
+	{
+	public:
+		cPlayer * m_Player;
+		cEntity * m_Attacker;
+
+		LookForWolves(cPlayer * a_Me, cEntity * a_MyAttacker) :
+			m_Player(a_Me),
+			m_Attacker(a_MyAttacker)
+		{
+		}
+
+		virtual bool Item(cEntity * a_Entity) override
+		{
+			if (a_Entity->IsMob())
+			{
+				cMonster * Mob = static_cast<cMonster*>(a_Entity);
+				if (Mob->GetMobType() == mtWolf)
+				{
+					cWolf * Wolf = static_cast<cWolf*>(Mob);
+					Wolf->NearbyPlayerIsFighting(m_Player, m_Attacker);
+				}
+			}
+			return false;
+		}
+	} Callback(this, a_Opponent);
+
+	m_World->ForEachEntityInBox(cBoundingBox(GetPosition(), 16, 16), Callback);
 }
 
 
@@ -958,7 +949,15 @@ void cPlayer::KilledBy(TakeDamageInfo & a_TDI)
 			case dtEnderPearl: DamageText = "misused an ender pearl"; break;
 			case dtAdmin: DamageText = "was administrator'd"; break;
 			case dtExplosion: DamageText = "blew up"; break;
-			default: DamageText = "died, somehow; we've no idea how though"; break;
+			case dtAttack: DamageText = "was attacked by thin air"; break;
+			#ifndef __clang__
+			default:
+			{
+				ASSERT(!"Unknown damage type");
+				DamageText = "died, somehow; we've no idea how though";
+				break;
+			}
+			#endif  // __clang__
 		}
 		AString DeathMessage = Printf("%s %s", GetName().c_str(), DamageText.c_str());
 		PluginManager->CallHookKilled(*this, a_TDI, DeathMessage);
@@ -1260,6 +1259,7 @@ void cPlayer::SetCapabilities()
 	if (IsGameModeSpectator())
 	{
 		SetVisible(false);
+		SetCanFly(true);
 	}
 	else
 	{
@@ -1335,6 +1335,46 @@ void cPlayer::TeleportToCoords(double a_PosX, double a_PosY, double a_PosZ)
 		m_World->BroadcastTeleportEntity(*this, GetClientHandle());
 		m_ClientHandle->SendPlayerMoveLook();
 	}
+}
+
+
+
+
+
+void cPlayer::Freeze(const Vector3d & a_Location)
+{
+	FreezeInternal(a_Location, true);
+}
+
+
+
+
+
+bool cPlayer::IsFrozen()
+{
+	return m_IsFrozen;
+}
+
+
+
+
+
+int cPlayer::GetFrozenDuration()
+{
+	return m_FreezeCounter;
+}
+
+
+
+
+
+void cPlayer::Unfreeze()
+{
+	m_FreezeCounter = -1;
+	m_IsFrozen = false;
+	SetPosition(m_FrozenPosition);
+	BroadcastMovementUpdate(m_ClientHandle.get());
+	m_ClientHandle->SendPlayerPosition();
 }
 
 
@@ -1609,6 +1649,20 @@ void cPlayer::TossItems(const cItems & a_Items)
 	vY = -vY * 2 + 1.f;
 	m_World->SpawnItemPickups(a_Items, GetPosX(), GetEyeHeight(), GetPosZ(), vX * 3, vY * 3, vZ * 3, true);  // 'true' because created by player
 }
+
+
+
+
+
+void cPlayer::FreezeInternal(const Vector3d & a_Location, bool a_ManuallyFrozen)
+{
+	m_IsFrozen = true;
+	m_FrozenPosition = a_Location;
+	m_IsManuallyFrozen = a_ManuallyFrozen;
+}
+
+
+
 
 
 bool cPlayer::DoMoveToWorld(cWorld * a_World, bool a_ShouldSendRespawn, Vector3d a_NewPosition)

@@ -14,7 +14,7 @@ Cubeset =
 	Metadata =
 	{
 		CubesetFormatVersion = 1,
-		ExportDate = "2015-06-20 10:16:55",
+		ExportDate = "2015-10-10 20:21:06",
 		["AllowedBiomes"] = "Plains, Savanna, SavannaM, SunflowerPlains",
 		["IntendedUse"] = "Village",
 	},
@@ -304,14 +304,15 @@ Cubeset =
 			},
 			Metadata =
 			{
-				["DefaultWeight"] = "100",
+				["AddWeightIfSame"] = "0",
+				["IsStarting"] = "1",
 				["AllowedRotations"] = "7",
 				["MergeStrategy"] = "msSpongePrint",
-				["IsStarting"] = "1",
-				["DepthWeight"] = "",
 				["ShouldExpandFloor"] = "1",
+				["DepthWeight"] = "",
+				["VerticalStrategy"] = "TerrainOrOceanTop|-9",
 				["MoveToGround"] = "1",
-				["AddWeightIfSame"] = "0",
+				["DefaultWeight"] = "100",
 			},
 			BlockDefinitions =
 			{
@@ -462,11 +463,14 @@ Cubeset =
 				"d: 60: 7",  -- tilleddirt
 				"e:  8: 0",  -- water
 				"f: 60: 5",  -- tilleddirt
-				"g: 60: 4",  -- tilleddirt
-				"h: 60: 1",  -- tilleddirt
-				"i: 50: 5",  -- torch
-				"j: 59: 7",  -- crops
+				"g: 60: 2",  -- tilleddirt
+				"h: 60: 6",  -- tilleddirt
+				"i: 60: 4",  -- tilleddirt
+				"j: 60: 3",  -- tilleddirt
+				"k: 60: 0",  -- tilleddirt
+				"l: 50: 5",  -- torch
 				"m: 19: 0",  -- sponge
+				"n: 59: 7",  -- crops
 			},
 			BlockData =
 			{
@@ -494,25 +498,25 @@ Cubeset =
 
 				-- Level 2
 				"ccccccc.ccccccc",  --  0
-				"cddeddc.cddeddc",  --  1
-				"cddeddc.cddeddc",  --  2
-				"cddeddc.cddeddc",  --  3
-				"cddeddc.cddeddc",  --  4
+				"cddeddc.cfdegfc",  --  1
+				"cddeddc.chdeddc",  --  2
+				"cddeddc.cdhedic",  --  3
+				"cddeddc.cjhehdc",  --  4
 				"cddeddc.cddeddc",  --  5
-				"cdfeddc.cdgeddc",  --  6
-				"cdfefhc.cddeddc",  --  7
+				"cddeddc.cfheddc",  --  6
+				"cddeddc.cdiefkc",  --  7
 				"ccccccc.ccccccc",  --  8
 
 				-- Level 3
-				"i.....i.i.....i",  --  0
-				".jj.jj...jj.jj.",  --  1
-				".jj.jj...jj.jj.",  --  2
-				".jj.jj...jj.jj.",  --  3
-				".jj.jj...jj.jj.",  --  4
-				".jj.jj...jj.jj.",  --  5
-				".jj.jj...jj.jj.",  --  6
-				".jj.jj...jj.jj.",  --  7
-				"i.....i.i.....i",  --  8
+				"l.....l.l.....l",  --  0
+				".nn.nn...nn.nn.",  --  1
+				".nn.nn...nn.nn.",  --  2
+				".nn.nn...nn.nn.",  --  3
+				".nn.nn...nn.nn.",  --  4
+				".nn.nn...nn.nn.",  --  5
+				".nn.nn...nn.nn.",  --  6
+				".nn.nn...nn.nn.",  --  7
+				"l.....l.l.....l",  --  8
 
 				-- Level 4
 				"...............",  --  0
@@ -785,9 +789,8 @@ Cubeset =
 				"a:  3: 0",  -- dirt
 				"b: 17: 0",  -- tree
 				"c: 60: 7",  -- tilleddirt
-				"d: 60: 6",  -- tilleddirt
-				"e:  8: 0",  -- water
-				"f: 59: 7",  -- crops
+				"d:  8: 0",  -- water
+				"e: 59: 7",  -- crops
 				"m: 19: 0",  -- sponge
 			},
 			BlockData =
@@ -804,19 +807,19 @@ Cubeset =
 				-- Level 1
 				"bbbbbbbbbb",  --  0
 				"bccccccccb",  --  1
-				"bcccccdccb",  --  2
-				"beeeeeeeeb",  --  3
+				"bccccccccb",  --  2
+				"bddddddddb",  --  3
 				"bccccccccb",  --  4
 				"bccccccccb",  --  5
 				"bbbbbbbbbb",  --  6
 
 				-- Level 2
 				"..........",  --  0
-				".ffffffff.",  --  1
-				".ffffffff.",  --  2
+				".eeeeeeee.",  --  1
+				".eeeeeeee.",  --  2
 				"..........",  --  3
-				".ffffffff.",  --  4
-				".ffffffff.",  --  5
+				".eeeeeeee.",  --  4
+				".eeeeeeee.",  --  5
 				"..........",  --  6
 
 				-- Level 3
@@ -1096,12 +1099,12 @@ Cubeset =
 				-- Level 2
 				"ddddddddddddd",  --  0
 				"deefeefeefeed",  --  1
-				"deefeefeefeed",  --  2
+				"dgefeefeefeed",  --  2
 				"deefeefeefeed",  --  3
 				"deefeefeefeed",  --  4
 				"deefeefeefeed",  --  5
 				"deefeefeefeed",  --  6
-				"deefeefegfeed",  --  7
+				"deefeefeefeed",  --  7
 				"deefeefeefeed",  --  8
 				"deefeefeefeed",  --  9
 				"deefeefeefeed",  -- 10
@@ -1338,7 +1341,7 @@ Cubeset =
 				"e: 67: 3",  -- stairs
 				"f: 17: 0",  -- tree
 				"g:  5: 0",  -- planks
-				"h: 64: 3",  -- wooddoorblock
+				"h: 64: 7",  -- wooddoorblock
 				"i: 64: 1",  -- wooddoorblock
 				"j:102: 0",  -- glasspane
 				"k: 64: 9",  -- wooddoorblock
@@ -1727,7 +1730,7 @@ Cubeset =
 					Type = -1,
 					RelX = 4,
 					RelY = 1,
-					RelZ = -1,
+					RelZ = 0,
 					Direction = 2,  -- Z-
 				},
 			},
@@ -2665,11 +2668,11 @@ Cubeset =
 				".:  0: 0",  -- air
 				"a:  4: 0",  -- cobblestone
 				"b:  3: 0",  -- dirt
-				"c: 67: 0",  -- stairs
-				"d: 67: 2",  -- stairs
-				"e: 67: 1",  -- stairs
-				"f: 43: 0",  -- doublestep
-				"g:  2: 0",  -- grass
+				"c:  2: 0",  -- grass
+				"d: 67: 0",  -- stairs
+				"e: 67: 2",  -- stairs
+				"f: 67: 1",  -- stairs
+				"g: 43: 0",  -- doublestep
 				"h: 17: 0",  -- tree
 				"i:  5: 0",  -- planks
 				"j: 64: 3",  -- wooddoorblock
@@ -2700,30 +2703,30 @@ Cubeset =
 				"mmbbbbbbbmm",  --  8
 				"mmbbbbbbbmm",  --  9
 				"mmbbbbbbbmm",  -- 10
-				"mmbbbbbbbmm",  -- 11
+				"mmcbbbbbbmm",  -- 11
 				"mmbbbbbbbmm",  -- 12
 
 				-- Level 1
-				"....cde....",  --  0
+				"....def....",  --  0
 				".aaaaaaaaa.",  --  1
-				".affffaaaa.",  --  2
-				".affffaaaa.",  --  3
-				".affffaaaa.",  --  4
-				".affffaaaa.",  --  5
-				".affffaaaa.",  --  6
+				".aggggaaaa.",  --  2
+				".aggggaaaa.",  --  3
+				".aggggaaaa.",  --  4
+				".aggggaaaa.",  --  5
+				".aggggaaaa.",  --  6
 				".aaaaaaaaa.",  --  7
-				"..ggggggg..",  --  8
-				"mmgggggggmm",  --  9
-				"mmgggggggmm",  -- 10
-				"mmgggggggmm",  -- 11
-				"mmgggggggmm",  -- 12
+				"..ccccccc..",  --  8
+				"mmcccccccmm",  --  9
+				"mmcccccccmm",  -- 10
+				"mmcccccccmm",  -- 11
+				"mmcccccccmm",  -- 12
 
 				-- Level 2
 				"...........",  --  0
 				".hiiijiiih.",  --  1
-				".i.f....ki.",  --  2
-				".i.f....li.",  --  3
-				".i.f....ni.",  --  4
+				".i.g....ki.",  --  2
+				".i.g....li.",  --  3
+				".i.g....ni.",  --  4
 				".i.......i.",  --  5
 				".i.......i.",  --  6
 				".hiiioiiih.",  --  7
@@ -4334,14 +4337,15 @@ Cubeset =
 			},
 			Metadata =
 			{
-				["DefaultWeight"] = "100",
+				["AddWeightIfSame"] = "0",
+				["IsStarting"] = "1",
 				["AllowedRotations"] = "7",
 				["MergeStrategy"] = "msSpongePrint",
-				["IsStarting"] = "1",
-				["DepthWeight"] = "",
 				["ShouldExpandFloor"] = "1",
+				["DepthWeight"] = "",
+				["VerticalStrategy"] = "TerrainOrOceanTop|-9",
 				["MoveToGround"] = "1",
-				["AddWeightIfSame"] = "0",
+				["DefaultWeight"] = "100",
 			},
 			BlockDefinitions =
 			{
@@ -4412,12 +4416,12 @@ Cubeset =
 
 				-- Level 5
 				"ddddddd",  --  0
-				"dbbbbbd",  --  1
+				"ebbbbbd",  --  1
 				"dbcccbd",  --  2
 				"dbcccbd",  --  3
 				"dbcccbd",  --  4
 				"dbbbbbd",  --  5
-				"ddddddd",  --  6
+				"edddddd",  --  6
 
 				-- Level 6
 				"ddddddd",  --  0
@@ -4570,14 +4574,15 @@ Cubeset =
 			},
 			Metadata =
 			{
-				["DefaultWeight"] = "100",
+				["AddWeightIfSame"] = "0",
+				["MoveToGround"] = "1",
 				["AllowedRotations"] = "7",
 				["MergeStrategy"] = "msSpongePrint",
-				["IsStarting"] = "1",
+				["VerticalStrategy"] = "TerrainOrOceanTop|-32",
 				["DepthWeight"] = "",
 				["ShouldExpandFloor"] = "0",
-				["MoveToGround"] = "1",
-				["AddWeightIfSame"] = "0",
+				["IsStarting"] = "1",
+				["DefaultWeight"] = "100",
 			},
 			BlockDefinitions =
 			{
@@ -6202,14 +6207,14 @@ Cubeset =
 					Type = 3,
 					RelX = 5,
 					RelY = 1,
-					RelZ = 1,
+					RelZ = 0,
 					Direction = 2,  -- Z-
 				},
 				{
 					Type = -3,
 					RelX = 5,
 					RelY = 1,
-					RelZ = 1,
+					RelZ = 0,
 					Direction = 2,  -- Z-
 				},
 			},

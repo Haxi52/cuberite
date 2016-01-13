@@ -7,16 +7,11 @@
 #include "../Item.h"
 #include "../Enchantments.h"
 #include "MonsterTypes.h"
-
+#include "PathFinder.h"
 
 
 class cClientHandle;
 class cWorld;
-
-// Fwd: cPath
-enum class ePathFinderStatus;
-class cPath;
-
 
 
 // tolua_begin
@@ -61,6 +56,8 @@ public:
 
 	virtual void OnRightClicked(cPlayer & a_Player) override;
 
+	virtual void HandleFalling(void) override;
+
 	/** Engage pathfinder and tell it to calculate a path to a given position, and move the mobile accordingly
 	Currently, the mob will only start moving to a new position after the position it is currently going to is reached. */
 	virtual void MoveToPosition(const Vector3d & a_Position);  // tolua_export
@@ -82,9 +79,9 @@ public:
 	virtual void EventLosePlayer(void);
 	virtual void CheckEventLostPlayer(void);
 
-	virtual void InStateIdle    (std::chrono::milliseconds a_Dt);
-	virtual void InStateChasing (std::chrono::milliseconds a_Dt);
-	virtual void InStateEscaping(std::chrono::milliseconds a_Dt);
+	virtual void InStateIdle    (std::chrono::milliseconds a_Dt, cChunk & a_Chunk);
+	virtual void InStateChasing (std::chrono::milliseconds a_Dt, cChunk & a_Chunk);
+	virtual void InStateEscaping(std::chrono::milliseconds a_Dt, cChunk & a_Chunk);
 
 	int GetAttackRate() { return static_cast<int>(m_AttackRate); }
 	void SetAttackRate(float a_AttackRate) { m_AttackRate = a_AttackRate; }
@@ -104,6 +101,7 @@ public:
 	void SetDropChanceLeggings(float a_DropChanceLeggings) { m_DropChanceLeggings = a_DropChanceLeggings; }
 	void SetDropChanceBoots(float a_DropChanceBoots) { m_DropChanceBoots = a_DropChanceBoots; }
 	void SetCanPickUpLoot(bool a_CanPickUpLoot) { m_CanPickUpLoot = a_CanPickUpLoot; }
+	void ResetAttackCooldown();
 
 	/** Sets whether the mob burns in daylight. Only evaluated at next burn-decision tick */
 	void SetBurnsInDaylight(bool a_BurnsInDaylight) { m_BurnsInDaylight = a_BurnsInDaylight; }
@@ -117,11 +115,11 @@ public:
 
 	// tolua_begin
 	bool IsBaby (void) const { return m_Age < 0; }
-	char GetAge (void) const { return m_Age; }
-	void SetAge(char a_Age)  { m_Age = a_Age; }
+	int GetAge (void) const { return m_Age; }
+	void SetAge(int a_Age)  { m_Age = a_Age; }
 	// tolua_end
-	
-	
+
+
 	// tolua_begin
 
 	/** Returns true if the monster has a custom name. */
@@ -168,16 +166,12 @@ protected:
 
 	/** A pointer to the entity this mobile is aiming to reach */
 	cEntity * m_Target;
-	cPath *  m_Path;  // TODO unique ptr
 
-	/** Stores if mobile is currently moving towards the ultimate, final destination */
-	bool m_IsFollowingPath;
+	/** The pathfinder instance handles pathfinding for this monster. */
+	cPathFinder m_PathFinder;
 
 	/** Stores if pathfinder is being used - set when final destination is set, and unset when stopped moving to final destination */
 	bool m_PathfinderActivated;
-
-	/* If 0, will give up reaching the next m_NextWayPointPosition and will re-compute path. */
-	int m_GiveUpCounter;
 
 	/** Coordinates of the next position that should be reached */
 	Vector3d m_NextWayPointPosition;
@@ -192,51 +186,26 @@ protected:
 	int FindFirstNonAirBlockPosition(double a_PosX, double a_PosZ);
 
 	/** Returns if the ultimate, final destination has been reached. */
-	bool ReachedFinalDestination(void) { return ((m_FinalDestination - GetPosition()).Length() < GetWidth()/2); }
+	bool ReachedFinalDestination(void) { return ((m_FinalDestination - GetPosition()).SqrLength() < WAYPOINT_RADIUS * WAYPOINT_RADIUS); }
 
 	/** Returns whether or not the target is close enough for attack. */
-	bool TargetIsInRange(void) { return ((m_FinalDestination - GetPosition()).SqrLength() < (m_AttackRange * m_AttackRange)); }
-
-	/** Returns if the intermediate waypoint of m_NextWayPointPosition has been reached */
-	bool ReachedNextWaypoint(void) { return ((m_NextWayPointPosition - GetPosition()).SqrLength() < 0.25); }
+	bool TargetIsInRange(void) { ASSERT(m_Target != nullptr); return ((m_Target->GetPosition() - GetPosition()).SqrLength() < (m_AttackRange * m_AttackRange)); }
 
 	/** Returns if a monster can reach a given height by jumping. */
 	inline bool DoesPosYRequireJump(int a_PosY)
 	{
-		return ((a_PosY > POSY_TOINT) && (a_PosY == POSY_TOINT + 1));
+		return ((a_PosY > POSY_TOINT));
 	}
-
-	/** Finds the next place to go by calculating a path and setting the m_NextWayPointPosition variable for the next block to head to
-	This is based on the ultimate, final destination and the current position, as well as the A* algorithm, and any environmental hazards
-	Returns if a path is ready, and therefore if the mob should move to m_NextWayPointPosition
-	*/
-	bool TickPathFinding(cChunk & a_Chunk);
 
 	/** Move in a straight line to the next waypoint in the path, will jump if needed. */
 	void MoveToWayPoint(cChunk & a_Chunk);
 
-	/** Ensures the destination is not buried underground or under water. Also ensures the destination is not in the air.
-	Only the Y coordinate of m_FinalDestination might be changed.
-	1. If m_FinalDestination is the position of a water block, m_FinalDestination's Y will be modified to point to the heighest water block in the pool in the current column.
-	2. If m_FinalDestination is the position of a solid, m_FinalDestination's Y will be modified to point to the first airblock above the solid in the current column.
-	3. If m_FinalDestination is the position of an air block, Y will keep decreasing until hitting either a solid or water.
-	Now either 1 or 2 is performed. */
-	bool EnsureProperDestination(cChunk & a_Chunk);
-
-	/** Resets a pathfinding task, be it due to failure or something else
-	Resets the pathfinder. If m_IsFollowingPath is true, TickPathFinding starts a brand new path.
-	Should only be called by the pathfinder, cMonster::Tick or StopMovingToPosition. */
-	void ResetPathFinding(void);
-
-	/** Stops pathfinding
-	Calls ResetPathFinding and sets m_IsFollowingPath to false */
+	/** Stops pathfinding. Calls ResetPathFinding and sets m_IsFollowingPath to false */
 	void StopMovingToPosition();
 
-	/** Sets the body yaw and head yaw / pitch based on next / ultimate destinations */
-	void SetPitchAndYawFromDestination(void);
+	/** Sets the body yaw and head yaw */
+	void SetPitchAndYawFromDestination(bool a_IsFollowingPath);
 
-	virtual void HandleFalling(void);
-	int m_LastGroundHeight;
 	int m_JumpCoolDown;
 
 	std::chrono::milliseconds m_IdleInterval;
@@ -252,7 +221,7 @@ protected:
 	float m_AttackRate;
 	int m_AttackDamage;
 	int m_AttackRange;
-	float m_AttackInterval;
+	int m_AttackCoolDownTicksLeft;
 	int m_SightDistance;
 
 	float m_DropChanceWeapon;
@@ -268,7 +237,8 @@ protected:
 	bool m_BurnsInDaylight;
 	double m_RelativeWalkSpeed;
 
-	char m_Age;
+	int m_Age;
+	int m_AgingTimer;
 
 	/** Adds a random number of a_Item between a_Min and a_Max to itemdrops a_Drops */
 	void AddRandomDropItem(cItems & a_Drops, unsigned int a_Min, unsigned int a_Max, short a_Item, short a_ItemHealth = 0);
@@ -284,6 +254,5 @@ protected:
 
 	/** Adds weapon that is equipped with the chance saved in m_DropChance[...] (this will be greter than 1 if picked up or 0.085 + (0.01 per LootingLevel) if born with) to the drop */
 	void AddRandomWeaponDropItem(cItems & a_Drops, unsigned int a_LootingLevel);
-
 
 } ;  // tolua_export

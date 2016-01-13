@@ -13,6 +13,7 @@
 #include "zlib/zlib.h"
 #include "Defines.h"
 #include "BlockEntities/BeaconEntity.h"
+#include "BlockEntities/BrewingstandEntity.h"
 #include "BlockEntities/ChestEntity.h"
 #include "BlockEntities/DispenserEntity.h"
 #include "BlockEntities/DropperEntity.h"
@@ -604,9 +605,6 @@ void cChunk::Tick(std::chrono::milliseconds a_Dt)
 {
 	BroadcastPendingBlockChanges();
 
-	// Set all blocks that have been queued for setting later:
-	ProcessQueuedSetBlocks();
-
 	CheckBlocks();
 	
 	// Tick simulators:
@@ -719,50 +717,6 @@ void cChunk::MoveEntityToNewChunk(cEntity * a_Entity)
 	} Mover(a_Entity);
 	
 	m_ChunkMap->CompareChunkClients(this, Neighbor, Mover);
-}
-
-
-
-
-
-void cChunk::ProcessQueuedSetBlocks(void)
-{
-	Int64 CurrTick = m_World->GetWorldAge();
-	for (sSetBlockQueueVector::iterator itr = m_SetBlockQueue.begin(); itr != m_SetBlockQueue.end();)
-	{
-		if (itr->m_Tick <= CurrTick)
-		{
-			if (itr->m_PreviousType != E_BLOCK_AIR)  // PreviousType defaults to 0 if not specified
-			{
-				if (GetBlock(itr->m_RelX, itr->m_RelY, itr->m_RelZ) == itr->m_PreviousType)
-				{
-					// Current world age is bigger than / equal to target world age - delay time reached AND
-					// Previous block type was the same as current block type (to prevent duplication)
-					SetBlock(itr->m_RelX, itr->m_RelY, itr->m_RelZ, itr->m_BlockType, itr->m_BlockMeta);  // SetMeta doesn't send to client
-					itr = m_SetBlockQueue.erase(itr);
-					LOGD("Successfully set queued block - previous and current types matched");
-				}
-				else
-				{
-					itr = m_SetBlockQueue.erase(itr);
-					LOGD("Failure setting queued block - previous and current blocktypes didn't match");
-				}
-			}
-			else
-			{
-				// Current world age is bigger than / equal to target world age - delay time reached
-				SetBlock(itr->m_RelX, itr->m_RelY, itr->m_RelZ, itr->m_BlockType, itr->m_BlockMeta);
-				itr = m_SetBlockQueue.erase(itr);
-				LOGD("Successfully set queued block - previous type ignored");
-			}
-		}
-		else
-		{
-			// Not yet
-			++itr;
-			continue;
-		}
-	}  // for itr - m_SetBlockQueue[]
 }
 
 
@@ -1131,7 +1085,7 @@ void cChunk::GrowCactus(int a_RelX, int a_RelY, int a_RelZ, int a_NumBlocks)
 
 bool cChunk::UnboundedRelGetBlock(int a_RelX, int a_RelY, int a_RelZ, BLOCKTYPE & a_BlockType, NIBBLETYPE & a_BlockMeta) const
 {
-	if ((a_RelY < 0) || (a_RelY >= cChunkDef::Height))
+	if (!cChunkDef::IsValidHeight(a_RelY))
 	{
 		LOGWARNING("%s: requesting a block with a_RelY out of range: %d", __FUNCTION__, a_RelY);
 		return false;
@@ -1152,7 +1106,7 @@ bool cChunk::UnboundedRelGetBlock(int a_RelX, int a_RelY, int a_RelZ, BLOCKTYPE 
 
 bool cChunk::UnboundedRelGetBlockType(int a_RelX, int a_RelY, int a_RelZ, BLOCKTYPE & a_BlockType) const
 {
-	if ((a_RelY < 0) || (a_RelY >= cChunkDef::Height))
+	if (!cChunkDef::IsValidHeight(a_RelY))
 	{
 		LOGWARNING("%s: requesting a block with a_RelY out of range: %d", __FUNCTION__, a_RelY);
 		return false;
@@ -1173,7 +1127,7 @@ bool cChunk::UnboundedRelGetBlockType(int a_RelX, int a_RelY, int a_RelZ, BLOCKT
 
 bool cChunk::UnboundedRelGetBlockMeta(int a_RelX, int a_RelY, int a_RelZ, NIBBLETYPE & a_BlockMeta) const
 {
-	if ((a_RelY < 0) || (a_RelY >= cChunkDef::Height))
+	if (!cChunkDef::IsValidHeight(a_RelY))
 	{
 		LOGWARNING("%s: requesting a block with a_RelY out of range: %d", __FUNCTION__, a_RelY);
 		return false;
@@ -1194,7 +1148,7 @@ bool cChunk::UnboundedRelGetBlockMeta(int a_RelX, int a_RelY, int a_RelZ, NIBBLE
 
 bool cChunk::UnboundedRelGetBlockBlockLight(int a_RelX, int a_RelY, int a_RelZ, NIBBLETYPE & a_BlockBlockLight) const
 {
-	if ((a_RelY < 0) || (a_RelY >= cChunkDef::Height))
+	if (!cChunkDef::IsValidHeight(a_RelY))
 	{
 		LOGWARNING("%s: requesting a block with a_RelY out of range: %d", __FUNCTION__, a_RelY);
 		return false;
@@ -1215,7 +1169,7 @@ bool cChunk::UnboundedRelGetBlockBlockLight(int a_RelX, int a_RelY, int a_RelZ, 
 
 bool cChunk::UnboundedRelGetBlockSkyLight(int a_RelX, int a_RelY, int a_RelZ, NIBBLETYPE & a_BlockSkyLight) const
 {
-	if ((a_RelY < 0) || (a_RelY >= cChunkDef::Height))
+	if (!cChunkDef::IsValidHeight(a_RelY))
 	{
 		LOGWARNING("%s: requesting a block with a_RelY out of range: %d", __FUNCTION__, a_RelY);
 		return false;
@@ -1236,7 +1190,7 @@ bool cChunk::UnboundedRelGetBlockSkyLight(int a_RelX, int a_RelY, int a_RelZ, NI
 
 bool cChunk::UnboundedRelGetBlockLights(int a_RelX, int a_RelY, int a_RelZ, NIBBLETYPE & a_BlockLight, NIBBLETYPE & a_SkyLight) const
 {
-	if ((a_RelY < 0) || (a_RelY >= cChunkDef::Height))
+	if (!cChunkDef::IsValidHeight(a_RelY))
 	{
 		LOGWARNING("%s: requesting a block with a_RelY out of range: %d", __FUNCTION__, a_RelY);
 		return false;
@@ -1258,7 +1212,7 @@ bool cChunk::UnboundedRelGetBlockLights(int a_RelX, int a_RelY, int a_RelZ, NIBB
 
 bool cChunk::UnboundedRelSetBlock(int a_RelX, int a_RelY, int a_RelZ, BLOCKTYPE a_BlockType, NIBBLETYPE a_BlockMeta)
 {
-	if ((a_RelY < 0) || (a_RelY >= cChunkDef::Height))
+	if (!cChunkDef::IsValidHeight(a_RelY))
 	{
 		LOGWARNING("UnboundedRelSetBlock(): requesting a block with a_RelY out of range: %d", a_RelY);
 		return false;
@@ -1279,7 +1233,7 @@ bool cChunk::UnboundedRelSetBlock(int a_RelX, int a_RelY, int a_RelZ, BLOCKTYPE 
 
 bool cChunk::UnboundedRelFastSetBlock(int a_RelX, int a_RelY, int a_RelZ, BLOCKTYPE a_BlockType, NIBBLETYPE a_BlockMeta)
 {
-	if ((a_RelY < 0) || (a_RelY >= cChunkDef::Height))
+	if (!cChunkDef::IsValidHeight(a_RelY))
 	{
 		LOGWARNING("UnboundedRelFastSetBlock(): requesting a block with a_RelY out of range: %d", a_RelY);
 		return false;
@@ -1300,7 +1254,7 @@ bool cChunk::UnboundedRelFastSetBlock(int a_RelX, int a_RelY, int a_RelZ, BLOCKT
 
 void cChunk::UnboundedQueueTickBlock(int a_RelX, int a_RelY, int a_RelZ)
 {
-	if ((a_RelY < 0) || (a_RelY >= cChunkDef::Height))
+	if (!cChunkDef::IsValidHeight(a_RelY))
 	{
 		// Outside of chunkmap
 		return;
@@ -1359,6 +1313,7 @@ void cChunk::CreateBlockEntities(void)
 					case E_BLOCK_JUKEBOX:
 					case E_BLOCK_FLOWER_POT:
 					case E_BLOCK_MOB_SPAWNER:
+					case E_BLOCK_BREWING_STAND:
 					{
 						if (!HasBlockEntityAt(x + m_PosX * Width, y, z + m_PosZ * Width))
 						{
@@ -1491,20 +1446,12 @@ void cChunk::SetBlock(int a_RelX, int a_RelY, int a_RelZ, BLOCKTYPE a_BlockType,
 		case E_BLOCK_JUKEBOX:
 		case E_BLOCK_FLOWER_POT:
 		case E_BLOCK_MOB_SPAWNER:
+		case E_BLOCK_BREWING_STAND:
 		{
 			AddBlockEntity(cBlockEntity::CreateByBlockType(a_BlockType, a_BlockMeta, WorldPos.x, WorldPos.y, WorldPos.z, m_World));
 			break;
 		}
 	}  // switch (a_BlockType)
-}
-
-
-
-
-
-void cChunk::QueueSetBlock(int a_RelX, int a_RelY, int a_RelZ, BLOCKTYPE a_BlockType, NIBBLETYPE a_BlockMeta, Int64 a_Tick, BLOCKTYPE a_PreviousBlockType)
-{
-	m_SetBlockQueue.push_back(sSetBlockQueueItem(a_RelX, a_RelY, a_RelZ, a_BlockType, a_BlockMeta, a_Tick, a_PreviousBlockType));
 }
 
 
@@ -1723,13 +1670,14 @@ void cChunk::SetAlwaysTicked(bool a_AlwaysTicked)
 
 
 
-void cChunk::UseBlockEntity(cPlayer * a_Player, int a_X, int a_Y, int a_Z)
+bool cChunk::UseBlockEntity(cPlayer * a_Player, int a_X, int a_Y, int a_Z)
 {
 	cBlockEntity * be = GetBlockEntity(a_X, a_Y, a_Z);
 	if (be != nullptr)
 	{
-		be->UsedBy(a_Player);
+		return be->UsedBy(a_Player);
 	}
+	return false;
 }
 
 
@@ -2056,6 +2004,24 @@ bool cChunk::ForEachBlockEntity(cBlockEntityCallback & a_Callback)
 
 
 
+bool cChunk::ForEachBrewingstand(cBrewingstandCallback & a_Callback)
+{
+	// The blockentity list is locked by the parent chunkmap's CS
+	for (cBlockEntityList::iterator itr = m_BlockEntities.begin(), itr2 = itr; itr != m_BlockEntities.end(); itr = itr2)
+	{
+		++itr2;
+		if (a_Callback.Item(reinterpret_cast<cBrewingstandEntity *>(*itr)))
+		{
+			return false;
+		}
+	}  // for itr - m_BlockEntitites[]
+	return true;
+}
+
+
+
+
+
 bool cChunk::ForEachChest(cChestCallback & a_Callback)
 {
 	// The blockentity list is locked by the parent chunkmap's CS
@@ -2199,46 +2165,6 @@ bool cChunk::DoWithBlockEntityAt(int a_BlockX, int a_BlockY, int a_BlockZ, cBloc
 
 
 
-
-bool cChunk::DoWithRedstonePoweredEntityAt(int a_BlockX, int a_BlockY, int a_BlockZ, cRedstonePoweredCallback & a_Callback)
-{
-	// The blockentity list is locked by the parent chunkmap's CS
-	for (cBlockEntityList::iterator itr = m_BlockEntities.begin(), itr2 = itr; itr != m_BlockEntities.end(); itr = itr2)
-	{
-		++itr2;
-		if (((*itr)->GetPosX() != a_BlockX) || ((*itr)->GetPosY() != a_BlockY) || ((*itr)->GetPosZ() != a_BlockZ))
-		{
-			continue;
-		}
-		switch ((*itr)->GetBlockType())
-		{
-			case E_BLOCK_DROPPER:
-			case E_BLOCK_DISPENSER:
-			case E_BLOCK_NOTE_BLOCK:
-			{
-				break;
-			}
-			default:
-			{
-				// There is a block entity here, but of different type. No other block entity can be here, so we can safely bail out
-				return false;
-			}
-		}
-		
-		if (a_Callback.Item(dynamic_cast<cRedstonePoweredEntity *>(*itr)))  // Needs dynamic_cast due to multiple inheritance
-		{
-			return false;
-		}
-		return true;
-	}  // for itr - m_BlockEntitites[]
-	
-	// Not found:
-	return false;
-}
-
-
-
-
 bool cChunk::DoWithBeaconAt(int a_BlockX, int a_BlockY, int a_BlockZ, cBeaconCallback & a_Callback)
 {
 	// The blockentity list is locked by the parent chunkmap's CS
@@ -2263,6 +2189,38 @@ bool cChunk::DoWithBeaconAt(int a_BlockX, int a_BlockY, int a_BlockZ, cBeaconCal
 		return true;
 	}  // for itr - m_BlockEntitites[]
 	
+	// Not found:
+	return false;
+}
+
+
+
+
+
+bool cChunk::DoWithBrewingstandAt(int a_BlockX, int a_BlockY, int a_BlockZ, cBrewingstandCallback & a_Callback)
+{
+	// The blockentity list is locked by the parent chunkmap's CS
+	for (cBlockEntityList::iterator itr = m_BlockEntities.begin(), itr2 = itr; itr != m_BlockEntities.end(); itr = itr2)
+	{
+		++itr2;
+		if (((*itr)->GetPosX() != a_BlockX) || ((*itr)->GetPosY() != a_BlockY) || ((*itr)->GetPosZ() != a_BlockZ))
+		{
+			continue;
+		}
+		if ((*itr)->GetBlockType() != E_BLOCK_BREWING_STAND)
+		{
+			// There is a block entity here, but of different type. No other block entity can be here, so we can safely bail out
+			return false;
+		}
+
+		// The correct block entity is here
+		if (a_Callback.Item(reinterpret_cast<cBrewingstandEntity *>(*itr)))
+		{
+			return false;
+		}
+		return true;
+	}  // for itr - m_BlockEntitites[]
+
 	// Not found:
 	return false;
 }
@@ -3085,7 +3043,7 @@ void cChunk::BroadcastSoundEffect(const AString & a_SoundName, double a_X, doubl
 
 
 
-void cChunk::BroadcastSoundParticleEffect(int a_EffectID, int a_SrcX, int a_SrcY, int a_SrcZ, int a_Data, const cClientHandle * a_Exclude)
+void cChunk::BroadcastSoundParticleEffect(const EffectID a_EffectID, int a_SrcX, int a_SrcY, int a_SrcZ, int a_Data, const cClientHandle * a_Exclude)
 {
 	for (auto itr = m_LoadedByClient.begin(); itr != m_LoadedByClient.end(); ++itr)
 	{

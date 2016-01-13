@@ -50,7 +50,7 @@ public:
 
 	virtual void HandlePhysics(std::chrono::milliseconds a_Dt, cChunk &) override { UNUSED(a_Dt); }
 
-	/** Returns the curently equipped weapon; empty item if none */
+	/** Returns the currently equipped weapon; empty item if none */
 	virtual cItem GetEquippedWeapon(void) const override { return m_Inventory.GetEquippedItem(); }
 
 	/** Returns the currently equipped helmet; empty item if none */
@@ -83,7 +83,7 @@ public:
 	/** Gets the experience total - XpTotal for score on death */
 	inline int GetXpLifetimeTotal(void) { return m_LifetimeTotalXp; }
 
-	/** Gets the currrent experience */
+	/** Gets the current experience */
 	inline int GetCurrentXp(void) { return m_CurrentXp; }
 
 	/** Gets the current level - XpLevel */
@@ -92,7 +92,7 @@ public:
 	/** Gets the experience bar percentage - XpP */
 	float GetXpPercentage(void);
 
-	/** Caculates the amount of XP needed for a given level
+	/** Calculates the amount of XP needed for a given level
 	Ref: http://minecraft.gamepedia.com/XP
 	*/
 	static int XpForLevel(int a_Level);
@@ -137,6 +137,18 @@ public:
 	virtual void TeleportToCoords(double a_PosX, double a_PosY, double a_PosZ) override;
 
 	// tolua_begin
+
+	/** Prevent the player from moving and lock him into a_Location. */
+	void Freeze(const Vector3d & a_Location);
+
+	/** Is the player frozen? */
+	bool IsFrozen();
+
+	/** How long has the player been frozen? */
+	int GetFrozenDuration();
+
+	/** Cancels Freeze(...) and allows the player to move naturally. */
+	void Unfreeze();
 
 	/** Sends the "look" packet to the player, forcing them to set their rotation to the specified values.
 	a_YawDegrees is clipped to range [-180, +180),
@@ -240,7 +252,7 @@ public:
 	void SendMessageFatal         (const AString & a_Message) { m_ClientHandle->SendChat(a_Message, mtFailure); }
 	void SendMessagePrivateMsg    (const AString & a_Message, const AString & a_Sender) { m_ClientHandle->SendChat(a_Message, mtPrivateMessage, a_Sender); }
 	void SendMessage              (const cCompositeChat & a_Message) { m_ClientHandle->SendChat(a_Message); }
-	
+
 	void SendSystemMessage        (const AString & a_Message) { m_ClientHandle->SendChatSystem(a_Message, mtCustom); }
 	void SendAboveActionBarMessage(const AString & a_Message) { m_ClientHandle->SendChatAboveActionBar(a_Message, mtCustom); }
 	void SendSystemMessage        (const cCompositeChat & a_Message) { m_ClientHandle->SendChatSystem(a_Message); }
@@ -487,6 +499,9 @@ public:
 	Assumes that all the blocks are in currently loaded chunks. */
 	bool PlaceBlocks(const sSetBlockVector & a_Blocks);
 
+	/** Notify friendly wolves that we took damage or did damage to an entity so that they might assist us. */
+	void NotifyFriendlyWolves(cEntity * a_Opponent);
+
 	// cEntity overrides:
 	virtual bool IsCrouched (void) const override { return m_IsCrouched; }
 	virtual bool IsSprinting(void) const override { return m_IsSprinting; }
@@ -550,8 +565,6 @@ protected:
 	/** A "buffer" which adds up hunger before it is substracted from m_FoodSaturationLevel or m_FoodLevel. Each action adds a little */
 	double m_FoodExhaustionLevel;
 
-	double m_LastGroundHeight;
-	bool m_bTouchGround;
 	double m_Stance;
 
 	/** Stores the player's inventory, consisting of crafting grid, hotbar, and main slots */
@@ -577,6 +590,18 @@ protected:
 	cClientHandlePtr m_ClientHandle;
 
 	cSlotNums m_InventoryPaintSlots;
+
+	/** if m_IsFrozen is true, we lock m_Location to this position. */
+	Vector3d m_FrozenPosition;
+
+	/** If true, we are locking m_Position to m_FrozenPosition. */
+	bool m_IsFrozen;
+
+	/** */
+	int m_FreezeCounter;
+
+	/** Was the player frozen manually by a plugin or automatically by the server? */
+	bool m_IsManuallyFrozen;
 
 	/** Max speed, relative to the game default.
 	1 means regular speed, 2 means twice as fast, 0.5 means half-speed.
@@ -662,6 +687,10 @@ protected:
 
 	/** Tosses a list of items. */
 	void TossItems(const cItems & a_Items);
+
+	/** Pins the player to a_Location until Unfreeze() is called.
+	If ManuallyFrozen is false, the player will unfreeze when the chunk is loaded. */
+	void FreezeInternal(const Vector3d & a_Location, bool a_ManuallyFrozen);
 
 	/** Returns the filename for the player data based on the UUID given.
 	This can be used both for online and offline UUIDs. */

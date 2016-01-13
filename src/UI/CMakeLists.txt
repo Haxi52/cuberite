@@ -1,6 +1,6 @@
 
 cmake_minimum_required (VERSION 2.6)
-project (MCServer)
+project (Cuberite)
 
 include_directories ("${PROJECT_SOURCE_DIR}/../")
 
@@ -9,6 +9,7 @@ SET (SRCS
 	Window.cpp
 	AnvilWindow.cpp
 	BeaconWindow.cpp
+	BrewingstandWindow.cpp
 	ChestWindow.cpp
 	CraftingWindow.cpp
 	DropSpenserWindow.cpp
@@ -23,6 +24,7 @@ SET (HDRS
 	Window.h
 	AnvilWindow.h
 	BeaconWindow.h
+	BrewingstandWindow.h
 	ChestWindow.h
 	CraftingWindow.h
 	DropSpenserWindow.h

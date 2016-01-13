@@ -1,14 +1,15 @@
 
 // Stubs.cpp
 
-// Implements stubs of various MCServer methods that are needed for linking but not for runtime
-// This is required so that we don't bring in the entire MCServer via dependencies
+// Implements stubs of various Cuberite methods that are needed for linking but not for runtime
+// This is required so that we don't bring in the entire Cuberite via dependencies
 
 #include "Globals.h"
 #include "BlockInfo.h"
 #include "SelfTests.h"
 #include "Bindings.h"
 #include "Bindings/DeprecatedBindings.h"
+#include "Bindings/LuaJson.h"
 #include "Bindings/ManualBindings.h"
 #include "BlockEntities/BlockEntity.h"
 #include "Blocks/BlockHandler.h"
@@ -42,6 +43,14 @@ void cManualBindings::Bind(lua_State * a_LuaState)
 
 
 void DeprecatedBindings::Bind(lua_State * a_LuaState)
+{
+}
+
+
+
+
+
+void cLuaJson::Bind(cLuaState & a_LuaState)
 {
 }
 
@@ -240,6 +249,15 @@ void cBlockHandler::Check(cChunkInterface & a_ChunkInterface, cBlockPluginInterf
 ColourID cBlockHandler::GetMapBaseColourID(NIBBLETYPE a_Meta)
 {
 	return 0;
+}
+
+
+
+
+
+bool cBlockHandler::IsInsideBlock(const Vector3d & a_Position, const BLOCKTYPE a_BlockType, const NIBBLETYPE a_BlockMeta)
+{
+	return true;
 }
 
 

@@ -115,6 +115,17 @@ public:
 		return Vector3i(a_RelBlockPosition.x + a_ChunkX * Width, a_RelBlockPosition.y, a_RelBlockPosition.z + a_ChunkZ * Width);
 	}
 
+	/** Validates a height-coordinate. Returns false if height-coordiante is out of height bounds */
+	inline static bool IsValidHeight(int a_Height)
+	{
+		return ((a_Height >= 0) && (a_Height < Height));
+	}
+	
+	/** Validates a width-coordinate. Returns false if width-coordiante is out of width bounds */
+	inline static bool IsValidWidth(int a_Width)
+	{
+		return ((a_Width >= 0) && (a_Width < Width));
+	}
 
 	/** Converts absolute block coords to chunk coords: */
 	inline static void BlockToChunk(int a_X, int a_Z, int & a_ChunkX, int & a_ChunkZ)
@@ -464,7 +475,8 @@ public:
 
 	virtual ~cChunkCoordCallback() {}
 
-	virtual void Call(int a_ChunkX, int a_ChunkZ) = 0;
+	/** Called with the chunk's coords, and an optional operation status flag for operations that support it. */
+	virtual void Call(int a_ChunkX, int a_ChunkZ, bool a_IsSuccess) = 0;
 } ;
 
 

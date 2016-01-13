@@ -10,7 +10,7 @@ AString GetOSErrorString( int a_ErrNo)
 
 	#ifdef _WIN32
 
-	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, a_ErrNo, 0, buffer, ARRAYCOUNT(buffer), nullptr);
+	FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, a_ErrNo, 0, buffer, ARRAYCOUNT(buffer), nullptr);
 	Printf(Out, "%d: %s", a_ErrNo, buffer);
 	if (!Out.empty() && (Out[Out.length() - 1] == '\n'))
 	{
@@ -22,7 +22,7 @@ AString GetOSErrorString( int a_ErrNo)
 	
 	// According to http://linux.die.net/man/3/strerror_r there are two versions of strerror_r():
 	
-	#if !defined(__APPLE__) && defined( _GNU_SOURCE) && !defined(ANDROID_NDK)  // GNU version of strerror_r()
+	#if defined(__GLIBC__) && defined( _GNU_SOURCE) && !defined(ANDROID_NDK)  // GNU version of strerror_r()
 	
 	char * res = strerror_r( errno, buffer, ARRAYCOUNT(buffer));
 	if (res != nullptr)

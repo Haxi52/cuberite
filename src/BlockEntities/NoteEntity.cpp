@@ -19,11 +19,12 @@ cNoteEntity::cNoteEntity(int a_BlockX, int a_BlockY, int a_BlockZ, cWorld * a_Wo
 
 
 
-void cNoteEntity::UsedBy(cPlayer * a_Player)
+bool cNoteEntity::UsedBy(cPlayer * a_Player)
 {
 	UNUSED(a_Player);
 	IncrementPitch();
 	MakeSound();
+	return true;
 }
 
 
@@ -43,7 +44,7 @@ void cNoteEntity::MakeSound(void)
 		{
 			// TODO: add other wood-based blocks if needed
 			instrument = E_INST_DOUBLE_BASS;
-			sampleName = "note.db";
+			sampleName = "note.bassattack";
 			break;
 		}
 		
@@ -75,7 +76,7 @@ void cNoteEntity::MakeSound(void)
 		{
 			// TODO: add other stone-based blocks if needed
 			instrument = E_INST_BASS_DRUM;
-			sampleName = "note.bassattack";
+			sampleName = "note.bd";
 			break;
 		}
 

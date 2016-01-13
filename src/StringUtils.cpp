@@ -21,7 +21,7 @@
 AString & AppendVPrintf(AString & str, const char * format, va_list args)
 {
 	ASSERT(format != nullptr);
-	
+
 	char buffer[2048];
 	int len;
 	#ifdef va_copy
@@ -47,7 +47,7 @@ AString & AppendVPrintf(AString & str, const char * format, va_list args)
 	#ifdef va_copy
 	va_end(argsCopy);
 	#endif
-	
+
 	// The result did not fit into the static buffer, use a dynamic buffer:
 	#ifdef _MSC_VER
 	// for MS CRT, we need to calculate the result length
@@ -57,7 +57,7 @@ AString & AppendVPrintf(AString & str, const char * format, va_list args)
 		return str;
 	}
 	#endif  // _MSC_VER
-	
+
 	// Allocate a buffer and printf into it:
 	#ifdef va_copy
 	va_copy(argsCopy, args);
@@ -232,7 +232,7 @@ AString TrimString(const AString & str)
 	{
 		return "";
 	}
-	
+
 	size_t end = len;
 	while (end >= start)
 	{
@@ -242,7 +242,7 @@ AString TrimString(const AString & str)
 		}
 		--end;
 	}
-	
+
 	return str.substr(start, end - start + 1);
 }
 
@@ -396,7 +396,7 @@ AString & RawBEToUTF8(const char * a_RawData, size_t a_NumShorts, AString & a_UT
 
 
 // UTF-8 conversion code adapted from:
-//  http://stackoverflow.com/questions/2867123/convert-utf-16-to-utf-8-under-windows-and-linux-in-c
+//  https://stackoverflow.com/questions/2867123/convert-utf-16-to-utf-8-under-windows-and-linux-in-c
 
 ////////////////////////////////////////////////////////////////////////////////
 // Begin of Unicode, Inc.'s code / information
@@ -500,13 +500,13 @@ static bool isLegalUTF8(const unsigned char * source, int length)
 
 
 
-AString UTF8ToRawBEUTF16(const char * a_UTF8, size_t a_UTF8Length)
+std::u16string UTF8ToRawBEUTF16(const AString & a_UTF8)
 {
-	AString UTF16;
-	UTF16.reserve(a_UTF8Length * 3);
+	std::u16string UTF16;
+	UTF16.reserve(a_UTF8.size() * 2);
 
-	const unsigned char * source    = reinterpret_cast<const unsigned char *>(a_UTF8);
-	const unsigned char * sourceEnd = source + a_UTF8Length;
+	const unsigned char * source    = reinterpret_cast<const unsigned char *>(a_UTF8.data());
+	const unsigned char * sourceEnd = source + a_UTF8.size();
 	const int halfShift  = 10;  // used for shifting by 10 bits
 	const unsigned int halfBase = 0x0010000UL;
 	const unsigned int halfMask = 0x3ffUL;
@@ -524,7 +524,7 @@ AString UTF8ToRawBEUTF16(const char * a_UTF8, size_t a_UTF8Length)
 		{
 			return UTF16;
 		}
-		
+
 		// The cases all fall through. See "Note A" below.
 		switch (extraBytesToRead)
 		{
@@ -546,13 +546,13 @@ AString UTF8ToRawBEUTF16(const char * a_UTF8, size_t a_UTF8Length)
 				ch = ' ';
 			}
 			unsigned short v = htons(static_cast<unsigned short>(ch));
-			UTF16.append(reinterpret_cast<const char *>(&v), 2);
+			UTF16.push_back(static_cast<char16_t>(v));
 		}
 		else if (ch > UNI_MAX_UTF16)
 		{
 			// Invalid value, replace with a space
 			unsigned short v = htons(' ');
-			UTF16.append(reinterpret_cast<const char *>(&v), 2);
+			UTF16.push_back(static_cast<char16_t>(v));
 		}
 		else
 		{
@@ -560,8 +560,8 @@ AString UTF8ToRawBEUTF16(const char * a_UTF8, size_t a_UTF8Length)
 			ch -= halfBase;
 			unsigned short v1 = htons((ch >> halfShift) + UNI_SUR_HIGH_START);
 			unsigned short v2 = htons((ch & halfMask) + UNI_SUR_LOW_START);
-			UTF16.append(reinterpret_cast<const char *>(&v1), 2);
-			UTF16.append(reinterpret_cast<const char *>(&v2), 2);
+			UTF16.push_back(static_cast<char16_t>(v1));
+			UTF16.push_back(static_cast<char16_t>(v2));
 		}
 	}
 	return UTF16;
@@ -609,7 +609,7 @@ AString & CreateHexDump(AString & a_Out, const void * a_Data, size_t a_Size, siz
 	char line[512];
 	char * p;
 	char * q;
-	
+
 	a_Out.reserve(a_Size / a_BytesPerLine * (18 + 6 * a_BytesPerLine));
 	for (size_t i = 0; i < a_Size; i += a_BytesPerLine)
 	{
@@ -953,7 +953,7 @@ bool SplitZeroTerminatedStrings(const AString & a_Strings, AStringVector & a_Out
 		a_Output.push_back(a_Strings.substr(start, size - start));
 		res = true;
 	}
-	
+
 	return res;
 }
 
@@ -1000,7 +1000,3 @@ AString StringsConcat(const AStringVector & a_Strings, char a_Separator)
 	}
 	return res;
 }
-
-
-
-

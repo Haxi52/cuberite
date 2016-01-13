@@ -334,7 +334,7 @@ bool cFile::DeleteFolder(const AString & a_FolderName)
 bool cFile::DeleteFolderContents(const AString & a_FolderName)
 {
 	auto Contents = cFile::GetFolderContents(a_FolderName);
-	for (const auto item: Contents)
+	for (const auto & item: Contents)
 	{
 		// Skip "." and ".." altogether:
 		if ((item == ".") || (item == ".."))
@@ -532,7 +532,6 @@ AStringVector cFile::GetFolderContents(const AString & a_Folder)
 	#else  // _WIN32
 
 		DIR * dp;
-		struct dirent *dirp;
 		AString Folder = a_Folder;
 		if (Folder.empty())
 		{
@@ -544,6 +543,7 @@ AStringVector cFile::GetFolderContents(const AString & a_Folder)
 		}
 		else
 		{
+			struct dirent *dirp;
 			while ((dirp = readdir(dp)) != nullptr)
 			{
 				AllFiles.push_back(dirp->d_name);

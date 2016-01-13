@@ -20,7 +20,6 @@
 cCommandBlockEntity::cCommandBlockEntity(int a_X, int a_Y, int a_Z, cWorld * a_World) :
 	super(E_BLOCK_COMMAND_BLOCK, a_X, a_Y, a_Z, a_World),
 	m_ShouldExecute(false),
-	m_IsPowered(false),
 	m_Result(0)
 {}
 
@@ -29,10 +28,11 @@ cCommandBlockEntity::cCommandBlockEntity(int a_X, int a_Y, int a_Z, cWorld * a_W
 
 
 
-void cCommandBlockEntity::UsedBy(cPlayer * a_Player)
+bool cCommandBlockEntity::UsedBy(cPlayer * a_Player)
 {
 	// Nothing to do
 	UNUSED(a_Player);
+	return true;
 }
 
 
@@ -106,19 +106,6 @@ NIBBLETYPE cCommandBlockEntity::GetResult(void) const
 void cCommandBlockEntity::Activate(void)
 {
 	m_ShouldExecute = true;
-}
-
-
-
-
-
-void cCommandBlockEntity::SetRedstonePower(bool a_IsPowered)
-{
-	if (a_IsPowered && !m_IsPowered)
-	{
-		Activate();
-	}
-	m_IsPowered = a_IsPowered;
 }
 
 

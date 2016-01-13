@@ -207,21 +207,30 @@ public:
 	
 	/** Detaches a previously attached state. */
 	void Detach(void);
-	
+
 	/** Returns true if the m_LuaState is valid */
 	bool IsValid(void) const { return (m_LuaState != nullptr); }
-	
+
+	/** Returns the name of the subsystem, as specified when the instance was created. */
+	AString GetSubsystemName(void) const { return m_SubsystemName; }
+
 	/** Adds the specified path to package.<a_PathVariable> */
 	void AddPackagePath(const AString & a_PathVariable, const AString & a_Path);
-	
+
 	/** Loads the specified file
 	Returns false and optionally logs a warning to the console if not successful (but the LuaState is kept open).
 	m_SubsystemName is displayed in the warning log message. */
 	bool LoadFile(const AString & a_FileName, bool a_LogWarnings = true);
-	
+
+	/** Loads the specified string.
+	Returns false and optionally logs a warning to the console if not successful (but the LuaState is kept open).
+	a_FileName is the original filename from where the string was read, and is used only for logging. It may be empty.
+	m_SubsystemName is displayed in the warning log message. */
+	bool LoadString(const AString & a_StringToLoad, const AString & a_FileName, bool a_LogWarnings = true);
+
 	/** Returns true if a_FunctionName is a valid Lua function that can be called */
 	bool HasFunction(const char * a_FunctionName);
-	
+
 	void PushNil(void);
 
 	// Push a const value onto the stack (keep alpha-sorted):
@@ -250,7 +259,6 @@ public:
 	void Push(int a_Value);
 	void Push(long a_Value);
 	void Push(const UInt32 a_Value);
-	void Push(void * a_Ptr);
 	void Push(std::chrono::milliseconds a_time);
 	
 	// GetStackValue() retrieves the value at a_StackPos, if it is a valid type. If not, a_Value is unchanged.
@@ -288,10 +296,16 @@ public:
 	}
 
 	/** Pushes the named value in the table at the top of the stack.
-	a_Name may be a path containing multiple table levels, such as "_G.cChatColor.Blue".
+	a_Name may be a path containing multiple table levels, such as "cChatColor.Blue".
 	If the value is found, it is pushed on top of the stack and the returned cStackValue is valid.
 	If the value is not found, the stack is unchanged and the returned cStackValue is invalid. */
 	cStackValue WalkToValue(const AString & a_Name);
+
+	/** Pushes the named value in the global table to the top of the stack.
+	a_Name may be a path containing multiple table levels, such as "cChatColor.Blue".
+	If the value is found in the global table, it is pushed to the top of the stack and the returned cStackValue is valid.
+	If the value is not found, the stack is unchanged and the returned cStackValue is invalid. */
+	cStackValue WalkToNamedGlobal(const AString & a_Name);
 
 	/** Retrieves the named value in the table at the top of the Lua stack.
 	a_Name may be a path containing multiple table levels, such as "_G.cChatColor.Blue".
@@ -359,6 +373,9 @@ public:
 	
 	/** Returns true if the specified parameters on the stack are numbers; also logs warning if not */
 	bool CheckParamNumber(int a_StartParam, int a_EndParam = -1);
+	
+	/** Returns true if the specified parameters on the stack are bools; also logs warning if not */
+	bool CheckParamBool(int a_StartParam, int a_EndParam = -1);
 	
 	/** Returns true if the specified parameters on the stack are strings; also logs warning if not */
 	bool CheckParamString(int a_StartParam, int a_EndParam = -1);
@@ -517,6 +534,40 @@ protected:
 	/** Tries to break into the MobDebug debugger, if it is installed. */
 	static int BreakIntoDebugger(lua_State * a_LuaState);
 } ;
+
+
+
+
+
+/** Keeps track of all create cLuaState instances.
+Can query each for the amount of currently used memory. */
+class cLuaStateTracker
+{
+public:
+	/** Adds the specified Lua state to the internal list of LuaStates. */
+	static void Add(cLuaState & a_LuaState);
+
+	/** Deletes the specified Lua state from the internal list of LuaStates. */
+	static void Del(cLuaState & a_LuaState);
+
+	/** Returns the statistics for all the registered LuaStates. */
+	static AString GetStats(void);
+
+protected:
+	typedef cLuaState * cLuaStatePtr;
+	typedef std::vector<cLuaStatePtr> cLuaStatePtrs;
+
+	/** The internal list of LuaStates.
+	Protected against multithreaded access by m_CSLuaStates. */
+	cLuaStatePtrs m_LuaStates;
+
+	/** Protects m_LuaStates against multithreaded access. */
+	cCriticalSection m_CSLuaStates;
+
+
+	/** Returns the single instance of this class. */
+	static cLuaStateTracker & Get(void);
+};
 
 
 

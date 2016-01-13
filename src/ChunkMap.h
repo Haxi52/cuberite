@@ -7,6 +7,7 @@
 
 
 #include "ChunkDataCallback.h"
+#include "EffectID.h"
 
 
 
@@ -20,6 +21,7 @@ class cChunkStay;
 class cChunk;
 class cPlayer;
 class cBeaconEntity;
+class cBrewingstandEntity;
 class cChestEntity;
 class cDispenserEntity;
 class cDropperEntity;
@@ -43,6 +45,7 @@ typedef cChunk *                           cChunkPtr;
 typedef cItemCallback<cEntity>             cEntityCallback;
 typedef cItemCallback<cBlockEntity>        cBlockEntityCallback;
 typedef cItemCallback<cBeaconEntity>       cBeaconCallback;
+typedef cItemCallback<cBrewingstandEntity> cBrewingstandCallback;
 typedef cItemCallback<cChestEntity>        cChestCallback;
 typedef cItemCallback<cDispenserEntity>    cDispenserCallback;
 typedef cItemCallback<cDropperEntity>      cDropperCallback;
@@ -89,7 +92,7 @@ public:
 	void BroadcastParticleEffect(const AString & a_ParticleName, float a_SrcX, float a_SrcY, float a_SrcZ, float a_OffsetX, float a_OffsetY, float a_OffsetZ, float a_ParticleData, int a_ParticleAmount, cClientHandle * a_Exclude = nullptr);
 	void BroadcastRemoveEntityEffect (const cEntity & a_Entity, int a_EffectID, const cClientHandle * a_Exclude = nullptr);
 	void BroadcastSoundEffect(const AString & a_SoundName, double a_X, double a_Y, double a_Z, float a_Volume, float a_Pitch, const cClientHandle * a_Exclude = nullptr);
-	void BroadcastSoundParticleEffect(int a_EffectID, int a_SrcX, int a_SrcY, int a_SrcZ, int a_Data, const cClientHandle * a_Exclude = nullptr);
+	void BroadcastSoundParticleEffect(const EffectID a_EffectID, int a_SrcX, int a_SrcY, int a_SrcZ, int a_Data, const cClientHandle * a_Exclude = nullptr);
 	void BroadcastSpawnEntity(cEntity & a_Entity, const cClientHandle * a_Exclude = nullptr);
 	void BroadcastThunderbolt(int a_BlockX, int a_BlockY, int a_BlockZ, const cClientHandle * a_Exclude = nullptr);
 	void BroadcastUseBed(const cEntity & a_Entity, int a_BlockX, int a_BlockY, int a_BlockZ);
@@ -97,8 +100,9 @@ public:
 	/** Sends the block entity, if it is at the coords specified, to a_Client */
 	void SendBlockEntity(int a_BlockX, int a_BlockY, int a_BlockZ, cClientHandle & a_Client);
 	
-	/** a_Player rclked block entity at the coords specified, handle it */
-	void UseBlockEntity(cPlayer * a_Player, int a_X, int a_Y, int a_Z);
+	/** a_Player rclked block entity at the coords specified, handle it
+	returns true if the use was successful, return false to use the block as a "normal" block */
+	bool UseBlockEntity(cPlayer * a_Player, int a_X, int a_Y, int a_Z);
 	
 	/** Calls the callback for the chunk specified, with ChunkMapCS locked; returns false if the chunk doesn't exist, otherwise returns the same value as the callback */
 	bool DoWithChunk(int a_ChunkX, int a_ChunkZ, cChunkCallback & a_Callback);
@@ -143,9 +147,6 @@ public:
 	int       GetHeight          (int a_BlockX, int a_BlockZ);  // Waits for the chunk to get loaded / generated
 	bool      TryGetHeight       (int a_BlockX, int a_BlockZ, int & a_Height);  // Returns false if chunk not loaded / generated
 	void FastSetBlock(int a_BlockX, int a_BlockY, int a_BlockZ, BLOCKTYPE a_BlockType, NIBBLETYPE a_BlockMeta);
-	
-	void FastSetQueuedBlocks();
-	void FastSetBlocks(sSetBlockList & a_BlockList);
 
 	/** Performs the specified single-block set operations simultaneously, as if SetBlock() was called for each item.
 	Is more efficient than calling SetBlock() multiple times.
@@ -160,7 +161,6 @@ public:
 	NIBBLETYPE GetBlockBlockLight(int a_BlockX, int a_BlockY, int a_BlockZ);
 	void       SetBlockMeta      (int a_BlockX, int a_BlockY, int a_BlockZ, NIBBLETYPE a_BlockMeta);
 	void       SetBlock          (int a_BlockX, int a_BlockY, int a_BlockZ, BLOCKTYPE a_BlockType, NIBBLETYPE a_BlockMeta, bool a_SendToClients = true);
-	void       QueueSetBlock     (int a_BlockX, int a_BlockY, int a_BlockZ, BLOCKTYPE a_BlockType, NIBBLETYPE a_BlockMeta, Int64 a_Tick, BLOCKTYPE a_PreviousBlockType = E_BLOCK_AIR);
 	bool       GetBlockTypeMeta  (int a_BlockX, int a_BlockY, int a_BlockZ, BLOCKTYPE & a_BlockType, NIBBLETYPE & a_BlockMeta);
 	bool       GetBlockInfo      (int a_BlockX, int a_BlockY, int a_BlockZ, BLOCKTYPE & a_BlockType, NIBBLETYPE & a_Meta, NIBBLETYPE & a_SkyLight, NIBBLETYPE & a_BlockLight);
 
@@ -246,6 +246,10 @@ public:
 	Returns true if all block entities processed, false if the callback aborted by returning true. */
 	bool ForEachBlockEntityInChunk(int a_ChunkX, int a_ChunkZ, cBlockEntityCallback & a_Callback);  // Lua-accessible
 
+	/** Calls the callback for brewingstand in the specified chunk.
+	Returns true if all brewingstands processed, false if the callback aborted by returning true. */
+	bool ForEachBrewingstandInChunk(int a_ChunkX, int a_ChunkZ, cBrewingstandCallback & a_Callback);  // Lua-accessible
+
 	/** Calls the callback for each chest in the specified chunk.
 	Returns true if all chests processed, false if the callback aborted by returning true. */
 	bool ForEachChestInChunk(int a_ChunkX, int a_ChunkZ, cChestCallback & a_Callback);  // Lua-accessible
@@ -273,6 +277,9 @@ public:
 	/** Calls the callback for the beacon at the specified coords.
 	Returns false if there's no beacon at those coords, true if found. */
 	bool DoWithBeaconAt(int a_BlockX, int a_BlockY, int a_BlockZ, cBeaconCallback & a_Callback);  // Lua-acessible
+
+	/** Calls the callback for the brewingstand at the specified coords; returns false if there's no brewingstand at those coords, true if found */
+	bool DoWithBrewingstandAt(int a_BlockX, int a_BlockY, int a_BlockZ, cBrewingstandCallback & a_Callback);  // Lua-acessible
 
 	/** Calls the callback for the chest at the specified coords.
 	Returns false if there's no chest at those coords, true if found. */
@@ -504,9 +511,6 @@ private:
 	cEvent           m_evtChunkValid;  // Set whenever any chunk becomes valid, via ChunkValidated()
 
 	cWorld * m_World;
-	
-	cCriticalSection m_CSFastSetBlock;
-	sSetBlockList    m_FastSetBlockQueue;
 	
 	/** The cChunkStay descendants that are currently enabled in this chunkmap */
 	cChunkStays m_ChunkStays;

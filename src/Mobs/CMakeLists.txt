@@ -1,6 +1,6 @@
 
 cmake_minimum_required (VERSION 2.6)
-project (MCServer)
+project (Cuberite)
 
 include_directories ("${PROJECT_SOURCE_DIR}/../")
 
@@ -25,6 +25,7 @@ SET (SRCS
 	PassiveAggressiveMonster.cpp
 	PassiveMonster.cpp
 	Path.cpp
+	PathFinder.cpp
 	Pig.cpp
 	Rabbit.cpp
 	Sheep.cpp
@@ -39,7 +40,7 @@ SET (SRCS
 	Wolf.cpp
 	Zombie.cpp
 	ZombiePigman.cpp)
-	
+
 SET (HDRS
 	AggressiveMonster.h
 	Bat.h
@@ -64,6 +65,7 @@ SET (HDRS
 	PassiveAggressiveMonster.h
 	PassiveMonster.h
 	Path.h
+	PathFinder.h
 	Pig.h
 	Rabbit.h
 	Sheep.h

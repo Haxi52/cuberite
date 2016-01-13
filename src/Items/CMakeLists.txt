@@ -1,6 +1,6 @@
 
 cmake_minimum_required (VERSION 2.6)
-project (MCServer)
+project (Cuberite)
 
 include_directories ("${PROJECT_SOURCE_DIR}/../")
 
@@ -13,6 +13,7 @@ SET (HDRS
 	ItemBed.h
 	ItemBigFlower.h
 	ItemBoat.h
+	ItemBottle.h
 	ItemBow.h
 	ItemBrewingStand.h
 	ItemBucket.h
@@ -38,7 +39,6 @@ SET (HDRS
 	ItemMilk.h
 	ItemMinecart.h
 	ItemMobHead.h
-	ItemMushroomSoup.h
 	ItemNetherWart.h
 	ItemPainting.h
 	ItemPickaxe.h

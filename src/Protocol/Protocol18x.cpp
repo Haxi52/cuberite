@@ -19,6 +19,7 @@ Implements the 1.8.x protocol classes:
 #include "../Root.h"
 #include "../Server.h"
 #include "../World.h"
+#include "../EffectID.h"
 #include "../StringCompression.h"
 #include "../CompositeChat.h"
 #include "../Statistics.h"
@@ -109,6 +110,20 @@ cProtocol180::cProtocol180(cClientHandle * a_Client, const AString & a_ServerAdd
 	m_IsEncrypted(false),
 	m_LastSentDimension(dimNotSet)
 {
+
+	// BungeeCord handling:
+	// If BC is setup with ip_forward == true, it sends additional data in the login packet's ServerAddress field:
+	// hostname\00ip-address\00uuid\00profile-properties-as-json
+	AStringVector Params;
+	if (cRoot::Get()->GetServer()->ShouldAllowBungeeCord() && SplitZeroTerminatedStrings(a_ServerAddress, Params) && (Params.size() == 4))
+	{
+		LOGD("Player at %s connected via BungeeCord", Params[1].c_str());
+		m_ServerAddress = Params[0];
+		m_Client->SetIPString(Params[1]);
+		m_Client->SetUUID(cMojangAPI::MakeUUIDShort(Params[2]));
+		m_Client->SetProperties(Params[3]);
+	}
+
 	// Create the comm log file, if so requested:
 	if (g_ShouldLogCommIn || g_ShouldLogCommOut)
 	{
@@ -839,11 +854,11 @@ void cProtocol180::SendPlayerListAddPlayer(const cPlayer & a_Player)
 
 	const Json::Value & Properties = a_Player.GetClientHandle()->GetProperties();
 	Pkt.WriteVarInt32(Properties.size());
-	for (Json::Value::iterator itr = Properties.begin(), end = Properties.end(); itr != end; ++itr)
+	for (auto & Node : Properties)
 	{
-		Pkt.WriteString(static_cast<Json::Value>(*itr).get("name", "").asString());
-		Pkt.WriteString(static_cast<Json::Value>(*itr).get("value", "").asString());
-		AString Signature = static_cast<Json::Value>(*itr).get("signature", "").asString();
+		Pkt.WriteString(Node.get("name", "").asString());
+		Pkt.WriteString(Node.get("value", "").asString());
+		AString Signature = Node.get("signature", "").asString();
 		if (Signature.empty())
 		{
 			Pkt.WriteBool(false);
@@ -1220,12 +1235,12 @@ void cProtocol180::SendSoundEffect(const AString & a_SoundName, double a_X, doub
 
 
 
-void cProtocol180::SendSoundParticleEffect(int a_EffectID, int a_SrcX, int a_SrcY, int a_SrcZ, int a_Data)
+void cProtocol180::SendSoundParticleEffect(const EffectID a_EffectID, int a_SrcX, int a_SrcY, int a_SrcZ, int a_Data)
 {
 	ASSERT(m_State == 3);  // In game mode?
 	
 	cPacketizer Pkt(*this, 0x28);  // Effect packet
-	Pkt.WriteBEInt32(a_EffectID);
+	Pkt.WriteBEInt32(static_cast<int>(a_EffectID));
 	Pkt.WritePosition64(a_SrcX, a_SrcY, a_SrcZ);
 	Pkt.WriteBEInt32(a_Data);
 	Pkt.WriteBool(false);
@@ -1819,39 +1834,44 @@ void cProtocol180::AddReceivedData(const char * a_Data, size_t a_Size)
 		}
 		
 		// Check packet for compression:
-		UInt32 CompressedSize = 0;
+		UInt32 UncompressedSize = 0;
 		AString UncompressedData;
 		if (m_State == 3)
 		{
 			UInt32 NumBytesRead = static_cast<UInt32>(m_ReceivedData.GetReadableSpace());
-			m_ReceivedData.ReadVarInt(CompressedSize);
-			if (CompressedSize > PacketLen)
+
+			if (!m_ReceivedData.ReadVarInt(UncompressedSize))
 			{
-				m_Client->Kick("Bad compression");
+				m_Client->Kick("Compression packet incomplete");
 				return;
 			}
-			if (CompressedSize > 0)
+
+			NumBytesRead -= static_cast<UInt32>(m_ReceivedData.GetReadableSpace());  // How many bytes has the UncompressedSize taken up?
+			ASSERT(PacketLen > NumBytesRead);
+			PacketLen -= NumBytesRead;
+
+			if (UncompressedSize > 0)
 			{
 				// Decompress the data:
 				AString CompressedData;
-				if (!m_ReceivedData.ReadString(CompressedData, CompressedSize) || (InflateString(CompressedData.data(), CompressedSize, UncompressedData) != Z_OK))
+				VERIFY(m_ReceivedData.ReadString(CompressedData, PacketLen));
+				if (InflateString(CompressedData.data(), PacketLen, UncompressedData) != Z_OK)
 				{
 					m_Client->Kick("Compression failure");
 					return;
 				}
 				PacketLen = static_cast<UInt32>(UncompressedData.size());
-			}
-			else
-			{
-				NumBytesRead -= static_cast<UInt32>(m_ReceivedData.GetReadableSpace());  // How many bytes has the CompressedSize taken up?
-				ASSERT(PacketLen > NumBytesRead);
-				PacketLen -= NumBytesRead;
+				if (PacketLen != UncompressedSize)
+				{
+					m_Client->Kick("Wrong uncompressed packet size given");
+					return;
+				}
 			}
 		}
 		
 		// Move the packet payload to a separate cByteBuffer, bb:
 		cByteBuffer bb(PacketLen + 1);
-		if (CompressedSize == 0)
+		if (UncompressedSize == 0)
 		{
 			// No compression was used, move directly
 			VERIFY(m_ReceivedData.ReadToByteBuffer(bb, static_cast<size_t>(PacketLen)));
@@ -1901,7 +1921,7 @@ void cProtocol180::AddReceivedData(const char * a_Data, size_t a_Size)
 				bb.ReadAll(Packet);
 				Packet.resize(Packet.size() - 1);  // Drop the final NUL pushed there for over-read detection
 				AString Out;
-				CreateHexDump(Out, Packet.data(), (int)Packet.size(), 24);
+				CreateHexDump(Out, Packet.data(), Packet.size(), 24);
 				LOGD("Packet contents:\n%s", Out.c_str());
 			#endif  // _DEBUG
 			
@@ -2130,7 +2150,7 @@ void cProtocol180::HandlePacketLoginEncryptionResponse(cByteBuffer & a_ByteBuffe
 
 	// Decrypt EncNonce using privkey
 	cRsaPrivateKey & rsaDecryptor = cRoot::Get()->GetServer()->GetPrivateKey();
-	Int32 DecryptedNonce[MAX_ENC_LEN / sizeof(Int32)];
+	UInt32 DecryptedNonce[MAX_ENC_LEN / sizeof(Int32)];
 	int res = rsaDecryptor.Decrypt(reinterpret_cast<const Byte *>(EncNonce.data()), EncNonce.size(), reinterpret_cast<Byte *>(DecryptedNonce), sizeof(DecryptedNonce));
 	if (res != 4)
 	{
@@ -2471,8 +2491,8 @@ void cProtocol180::HandlePacketSlotSelect(cByteBuffer & a_ByteBuffer)
 
 void cProtocol180::HandlePacketSteerVehicle(cByteBuffer & a_ByteBuffer)
 {
-	HANDLE_READ(a_ByteBuffer, ReadBEFloat, float, Forward);
 	HANDLE_READ(a_ByteBuffer, ReadBEFloat, float, Sideways);
+	HANDLE_READ(a_ByteBuffer, ReadBEFloat, float, Forward);
 	HANDLE_READ(a_ByteBuffer, ReadBEUInt8, UInt8, Flags);
 
 	if ((Flags & 0x2) != 0)
@@ -2480,6 +2500,10 @@ void cProtocol180::HandlePacketSteerVehicle(cByteBuffer & a_ByteBuffer)
 		m_Client->HandleUnmount();
 	}
 	else if ((Flags & 0x1) != 0)
+	{
+		// jump
+	}
+	else
 	{
 		m_Client->HandleSteerVehicle(Forward, Sideways);
 	}
@@ -2515,10 +2539,15 @@ void cProtocol180::HandlePacketUpdateSign(cByteBuffer & a_ByteBuffer)
 	}
 
 	AString Lines[4];
+	Json::Value root;
+	Json::Reader reader;
 	for (int i = 0; i < 4; i++)
 	{
 		HANDLE_READ(a_ByteBuffer, ReadVarUTF8String, AString, Line);
-		Lines[i] = Line.substr(1, Line.length() - 2);  // Remove ""
+		if (reader.parse(Line, root, false))
+		{
+			Lines[i] = root.asString();
+		}
 	}
 
 	m_Client->HandleUpdateSign(BlockX, BlockY, BlockZ, Lines[0], Lines[1], Lines[2], Lines[3]);
@@ -3080,8 +3109,21 @@ void cProtocol180::WriteBlockEntity(cPacketizer & a_Pkt, const cBlockEntity & a_
 			Writer.AddInt("z", MobHeadEntity.GetPosZ());
 			Writer.AddByte("SkullType", MobHeadEntity.GetType() & 0xFF);
 			Writer.AddByte("Rot", MobHeadEntity.GetRotation() & 0xFF);
-			Writer.AddString("ExtraType", MobHeadEntity.GetOwner().c_str());
 			Writer.AddString("id", "Skull");  // "Tile Entity ID" - MC wiki; vanilla server always seems to send this though
+
+			// The new Block Entity format for a Mob Head. See: http://minecraft.gamepedia.com/Head#Block_entity
+			Writer.BeginCompound("Owner");
+				Writer.AddString("Id", MobHeadEntity.GetOwnerUUID());
+				Writer.AddString("Name", MobHeadEntity.GetOwnerName());
+				Writer.BeginCompound("Properties");
+					Writer.BeginList("textures", TAG_Compound);
+						Writer.BeginCompound("");
+							Writer.AddString("Signature", MobHeadEntity.GetOwnerTextureSignature());
+							Writer.AddString("Value", MobHeadEntity.GetOwnerTexture());
+						Writer.EndCompound();
+					Writer.EndList();
+				Writer.EndCompound();
+			Writer.EndCompound();
 			break;
 		}
 
@@ -3282,7 +3324,7 @@ void cProtocol180::WriteMobMetadata(cPacketizer & a_Pkt, const cMonster & a_Mob)
 		{
 			auto & Creeper = reinterpret_cast<const cCreeper &>(a_Mob);
 			a_Pkt.WriteBEUInt8(0x10);
-			a_Pkt.WriteBEUInt8(Creeper.IsBlowing() ? 1 : 0);
+			a_Pkt.WriteBEUInt8(Creeper.IsBlowing() ? 1 : 255);
 			a_Pkt.WriteBEUInt8(0x11);
 			a_Pkt.WriteBEUInt8(Creeper.IsCharged() ? 1 : 0);
 			break;
@@ -3347,9 +3389,8 @@ void cProtocol180::WriteMobMetadata(cPacketizer & a_Pkt, const cMonster & a_Mob)
 			a_Pkt.WriteBEInt32(Appearance);
 			a_Pkt.WriteBEUInt8(0x56);  // Int at index 22
 			a_Pkt.WriteBEInt32(Horse.GetHorseArmour());
-			
 			a_Pkt.WriteBEUInt8(0x0c);
-			a_Pkt.WriteBEInt8(Horse.GetAge());
+			a_Pkt.WriteBEInt8(Horse.IsBaby() ? -1 : (Horse.IsInLoveCooldown() ? 1 : 0));
 			break;
 		}  // case mtHorse
 
@@ -3365,15 +3406,31 @@ void cProtocol180::WriteMobMetadata(cPacketizer & a_Pkt, const cMonster & a_Mob)
 		{
 			auto & Ocelot = reinterpret_cast<const cOcelot &>(a_Mob);
 			a_Pkt.WriteBEUInt8(0x0c);
-			a_Pkt.WriteBEInt8(Ocelot.GetAge());
+			a_Pkt.WriteBEInt8(Ocelot.IsBaby() ? -1 : (Ocelot.IsInLoveCooldown() ? 1 : 0));
 			break;
 		}  // case mtOcelot
+
+		case mtCow:
+		{
+			auto & Cow = reinterpret_cast<const cCow &>(a_Mob);
+			a_Pkt.WriteBEUInt8(0x0c);
+			a_Pkt.WriteBEInt8(Cow.IsBaby() ? -1 : (Cow.IsInLoveCooldown() ? 1 : 0));
+			break;
+		}  // case mtCow
+
+		case mtChicken:
+		{
+			auto & Chicken = reinterpret_cast<const cChicken &>(a_Mob);
+			a_Pkt.WriteBEUInt8(0x0c);
+			a_Pkt.WriteBEInt8(Chicken.IsBaby() ? -1 : (Chicken.IsInLoveCooldown() ? 1 : 0));
+			break;
+		}  // case mtChicken
 
 		case mtPig:
 		{
 			auto & Pig = reinterpret_cast<const cPig &>(a_Mob);
 			a_Pkt.WriteBEUInt8(0x0c);
-			a_Pkt.WriteBEInt8(Pig.GetAge());
+			a_Pkt.WriteBEInt8(Pig.IsBaby() ? -1 : (Pig.IsInLoveCooldown() ? 1 : 0));
 			a_Pkt.WriteBEUInt8(0x10);
 			a_Pkt.WriteBEUInt8(Pig.IsSaddled() ? 1 : 0);
 			break;
@@ -3383,7 +3440,7 @@ void cProtocol180::WriteMobMetadata(cPacketizer & a_Pkt, const cMonster & a_Mob)
 		{
 			auto & Sheep = reinterpret_cast<const cSheep &>(a_Mob);
 			a_Pkt.WriteBEUInt8(0x0c);
-			a_Pkt.WriteBEInt8(Sheep.GetAge());
+			a_Pkt.WriteBEInt8(Sheep.IsBaby() ? -1 : (Sheep.IsInLoveCooldown() ? 1 : 0));
 			
 			a_Pkt.WriteBEUInt8(0x10);
 			Byte SheepMetadata = 0;
@@ -3401,9 +3458,8 @@ void cProtocol180::WriteMobMetadata(cPacketizer & a_Pkt, const cMonster & a_Mob)
 			auto & Rabbit = reinterpret_cast<const cRabbit &>(a_Mob);
 			a_Pkt.WriteBEUInt8(0x12);
 			a_Pkt.WriteBEUInt8(Rabbit.GetRabbitTypeAsNumber());
-
 			a_Pkt.WriteBEUInt8(0x0c);
-			a_Pkt.WriteBEInt8(Rabbit.GetAge());
+			a_Pkt.WriteBEInt8(Rabbit.IsBaby() ? -1 : (Rabbit.IsInLoveCooldown() ? 1 : 0));
 			break;
 		}  // case mtRabbit
 
@@ -3429,7 +3485,7 @@ void cProtocol180::WriteMobMetadata(cPacketizer & a_Pkt, const cMonster & a_Mob)
 			a_Pkt.WriteBEUInt8(0x50);
 			a_Pkt.WriteBEInt32(Villager.GetVilType());
 			a_Pkt.WriteBEUInt8(0x0c);
-			a_Pkt.WriteBEInt8(Villager.GetAge());
+			a_Pkt.WriteBEInt8(Villager.IsBaby() ? -1 : 0);
 			break;
 		}  // case mtVillager
 
@@ -3476,9 +3532,8 @@ void cProtocol180::WriteMobMetadata(cPacketizer & a_Pkt, const cMonster & a_Mob)
 			a_Pkt.WriteBEUInt8(Wolf.IsBegging() ? 1 : 0);
 			a_Pkt.WriteBEUInt8(0x14);
 			a_Pkt.WriteBEUInt8(static_cast<UInt8>(Wolf.GetCollarColor()));
-
 			a_Pkt.WriteBEUInt8(0x0c);
-			a_Pkt.WriteBEInt8(Wolf.GetAge());
+			a_Pkt.WriteBEInt8(Wolf.IsBaby() ? -1 : 0);
 			break;
 		}  // case mtWolf
 

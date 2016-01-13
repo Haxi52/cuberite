@@ -70,8 +70,9 @@ public:
 	/** Called when the player starts digging the block. */
 	virtual void OnDigging(cChunkInterface & cChunkInterface, cWorldInterface & a_WorldInterface, cPlayer * a_Player, int a_BlockX, int a_BlockY, int a_BlockZ) {}
 	
-	/** Called if the user right clicks the block and the block is useable */
-	virtual void OnUse(cChunkInterface & a_ChunkInterface, cWorldInterface & a_WorldInterface, cPlayer * a_Player, int a_BlockX, int a_BlockY, int a_BlockZ, eBlockFace a_BlockFace, int a_CursorX, int a_CursorY, int a_CursorZ) {}
+	/** Called if the user right clicks the block and the block is useable
+	returns true if the use was successful, return false to use the block as a "normal" block */
+	virtual bool OnUse(cChunkInterface & a_ChunkInterface, cWorldInterface & a_WorldInterface, cPlayer * a_Player, int a_BlockX, int a_BlockY, int a_BlockZ, eBlockFace a_BlockFace, int a_CursorX, int a_CursorY, int a_CursorZ) { return false; }
 	
 	/** Called when a right click to this block is cancelled */
 	virtual void OnCancelRightClick(cChunkInterface & a_ChunkInterface, cWorldInterface & a_WorldInterface, cPlayer * a_Player, int a_BlockX, int a_BlockY, int a_BlockZ, eBlockFace a_BlockFace) {}
@@ -123,7 +124,11 @@ public:
 	/** Returns if this block drops if it gets destroyed by an unsuitable situation.
 	Default: true */
 	virtual bool DoesDropOnUnsuitable(void);
-	
+
+	/** Tests if a_Position is inside the block where a_Position is relative to the origin of the block
+	Note that this is considered from a "top-down" perspective i.e. empty spaces on the bottom of a block don't matter */
+	virtual bool IsInsideBlock(const Vector3d & a_Position, const BLOCKTYPE a_BlockType, const NIBBLETYPE a_BlockMeta);
+
 	/** Called when one of the neighbors gets set; equivalent to MC block update.
 	By default drops if position no more suitable (CanBeAt(), DoesDropOnUnsuitable(), Drop()),
 	and wakes up all simulators on the block. */

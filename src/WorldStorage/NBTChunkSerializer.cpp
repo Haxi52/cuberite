@@ -11,6 +11,7 @@
 #include "FastNBT.h"
 
 #include "../BlockEntities/BeaconEntity.h"
+#include "../BlockEntities/BrewingstandEntity.h"
 #include "../BlockEntities/ChestEntity.h"
 #include "../BlockEntities/CommandBlockEntity.h"
 #include "../BlockEntities/DispenserEntity.h"
@@ -196,6 +197,21 @@ void cNBTChunkSerializer::AddBeaconEntity(cBeaconEntity * a_Entity)
 
 
 
+void cNBTChunkSerializer::AddBrewingstandEntity(cBrewingstandEntity * a_Brewingstand)
+{
+	m_Writer.BeginCompound("");
+		AddBasicTileEntity(a_Brewingstand, "Brewingstand");
+		m_Writer.BeginList("Items", TAG_Compound);
+			AddItemGrid(a_Brewingstand->GetContents());
+		m_Writer.EndList();
+		m_Writer.AddShort("BrewTime", a_Brewingstand->GetTimeBrewed());
+	m_Writer.EndCompound();
+}
+
+
+
+
+
 void cNBTChunkSerializer::AddChestEntity(cChestEntity * a_Entity, BLOCKTYPE a_ChestType)
 {
 	m_Writer.BeginCompound("");
@@ -342,7 +358,20 @@ void cNBTChunkSerializer::AddMobHeadEntity(cMobHeadEntity * a_MobHead)
 		AddBasicTileEntity(a_MobHead, "Skull");
 		m_Writer.AddByte  ("SkullType", a_MobHead->GetType() & 0xFF);
 		m_Writer.AddByte  ("Rot",       a_MobHead->GetRotation() & 0xFF);
-		m_Writer.AddString("ExtraType", a_MobHead->GetOwner());
+
+		// The new Block Entity format for a Mob Head. See: http://minecraft.gamepedia.com/Head#Block_entity
+		m_Writer.BeginCompound("Owner");
+			m_Writer.AddString("Id", a_MobHead->GetOwnerUUID());
+			m_Writer.AddString("Name", a_MobHead->GetOwnerName());
+			m_Writer.BeginCompound("Properties");
+				m_Writer.BeginList("textures", TAG_Compound);
+					m_Writer.BeginCompound("");
+						m_Writer.AddString("Signature", a_MobHead->GetOwnerTextureSignature());
+						m_Writer.AddString("Value", a_MobHead->GetOwnerTexture());
+					m_Writer.EndCompound();
+				m_Writer.EndList();
+			m_Writer.EndCompound();
+		m_Writer.EndCompound();
 	m_Writer.EndCompound();
 }
 
@@ -556,7 +585,7 @@ void cNBTChunkSerializer::AddMonsterEntity(cMonster * a_Monster)
 				m_Writer.AddInt ("Style",          Horse->GetHorseStyle());
 				m_Writer.AddInt ("ArmorType",      Horse->GetHorseArmour());
 				m_Writer.AddByte("Saddle",         Horse->IsSaddled()? 1 : 0);
-				m_Writer.AddByte("Age",            static_cast<Byte>(Horse->GetAge()));
+				m_Writer.AddInt ("Age",            Horse->GetAge());
 				break;
 			}
 			case mtMagmaCube:
@@ -569,7 +598,7 @@ void cNBTChunkSerializer::AddMonsterEntity(cMonster * a_Monster)
 				const cSheep *Sheep = reinterpret_cast<const cSheep *>(a_Monster);
 				m_Writer.AddByte("Sheared", Sheep->IsSheared()? 1 : 0);
 				m_Writer.AddByte("Color",   static_cast<Byte>(Sheep->GetFurColor()));
-				m_Writer.AddByte("Age",     static_cast<Byte>(Sheep->GetAge()));
+				m_Writer.AddInt ("Age",     Sheep->GetAge());
 				break;
 			}
 			case mtSlime:
@@ -586,7 +615,7 @@ void cNBTChunkSerializer::AddMonsterEntity(cMonster * a_Monster)
 			{
 				const cVillager *Villager = reinterpret_cast<const cVillager *>(a_Monster);
 				m_Writer.AddInt("Profession", Villager->GetVilType());
-				m_Writer.AddByte("Age",       static_cast<Byte>(Villager->GetAge()));
+				m_Writer.AddInt("Age",        Villager->GetAge());
 				break;
 			}
 			case mtWither:
@@ -608,7 +637,7 @@ void cNBTChunkSerializer::AddMonsterEntity(cMonster * a_Monster)
 				m_Writer.AddByte("Sitting",     Wolf->IsSitting() ? 1 : 0);
 				m_Writer.AddByte("Angry",       Wolf->IsAngry() ? 1 : 0);
 				m_Writer.AddByte("CollarColor", static_cast<Byte>(Wolf->GetCollarColor()));
-				m_Writer.AddByte("Age",         static_cast<Byte>(Wolf->GetAge()));
+				m_Writer.AddInt ("Age",         Wolf->GetAge());
 				break;
 			}
 			case mtZombie:
@@ -616,30 +645,30 @@ void cNBTChunkSerializer::AddMonsterEntity(cMonster * a_Monster)
 				const cZombie *Zombie = reinterpret_cast<const cZombie *>(a_Monster);
 				m_Writer.AddByte("IsVillager",   Zombie->IsVillagerZombie() ? 1 : 0);
 				m_Writer.AddByte("IsConverting", Zombie->IsConverting() ? 1 : 0);
-				m_Writer.AddByte("Age",          static_cast<Byte>(Zombie->GetAge()));
+				m_Writer.AddInt ("Age",          Zombie->GetAge());
 				break;
 			}
 			case mtZombiePigman:
 			{
-				m_Writer.AddByte("Age", static_cast<Byte>(reinterpret_cast<const cZombiePigman *>(a_Monster)->GetAge()));
+				m_Writer.AddInt("Age", reinterpret_cast<const cZombiePigman *>(a_Monster)->GetAge());
 				break;
 			}
 			case mtOcelot:
 			{
-				m_Writer.AddByte("Age", static_cast<Byte>(reinterpret_cast<const cOcelot *>(a_Monster)->GetAge()));
+				m_Writer.AddInt("Age", reinterpret_cast<const cOcelot *>(a_Monster)->GetAge());
 				break;
 			}
 			case mtPig:
 			{
-				m_Writer.AddByte("Age", static_cast<Byte>(reinterpret_cast<const cPig *>(a_Monster)->GetAge()));
+				m_Writer.AddInt("Age", reinterpret_cast<const cPig *>(a_Monster)->GetAge());
 				break;
 			}
 			case mtRabbit:
 			{
 				const cRabbit *Rabbit = reinterpret_cast<const cRabbit *>(a_Monster);
-				m_Writer.AddInt("RabbitType", Rabbit->GetRabbitTypeAsNumber());
+				m_Writer.AddInt("RabbitType",      Rabbit->GetRabbitTypeAsNumber());
 				m_Writer.AddInt("MoreCarrotTicks", Rabbit->GetMoreCarrotTicks());
-				m_Writer.AddByte("Age", static_cast<Byte>(Rabbit->GetAge()));
+				m_Writer.AddInt("Age",             Rabbit->GetAge());
 				break;
 			}
 			case mtInvalidType:
@@ -906,6 +935,7 @@ void cNBTChunkSerializer::Entity(cEntity * a_Entity)
 		case cEntity::etItemFrame:    AddItemFrameEntity   (reinterpret_cast<cItemFrame *>       (a_Entity)); break;
 		case cEntity::etPainting:     AddPaintingEntity    (reinterpret_cast<cPainting *>        (a_Entity)); break;
 		case cEntity::etPlayer: return;  // Players aren't saved into the world
+		case cEntity::etFloater: return;  // Floaters aren't saved either
 		default:
 		{
 			ASSERT(!"Unhandled entity type is being saved");
@@ -938,6 +968,7 @@ void cNBTChunkSerializer::BlockEntity(cBlockEntity * a_Entity)
 	switch (a_Entity->GetBlockType())
 	{
 		case E_BLOCK_BEACON:        AddBeaconEntity      (reinterpret_cast<cBeaconEntity *>      (a_Entity)); break;
+		case E_BLOCK_BREWING_STAND: AddBrewingstandEntity(reinterpret_cast<cBrewingstandEntity *>(a_Entity)); break;
 		case E_BLOCK_CHEST:         AddChestEntity       (reinterpret_cast<cChestEntity *>       (a_Entity), a_Entity->GetBlockType()); break;
 		case E_BLOCK_COMMAND_BLOCK: AddCommandBlockEntity(reinterpret_cast<cCommandBlockEntity *>(a_Entity)); break;
 		case E_BLOCK_DISPENSER:     AddDispenserEntity   (reinterpret_cast<cDispenserEntity *>   (a_Entity)); break;

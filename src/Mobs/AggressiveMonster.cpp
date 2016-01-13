@@ -22,20 +22,12 @@ cAggressiveMonster::cAggressiveMonster(const AString & a_ConfigName, eMonsterTyp
 
 
 // What to do if in Chasing State
-void cAggressiveMonster::InStateChasing(std::chrono::milliseconds a_Dt)
+void cAggressiveMonster::InStateChasing(std::chrono::milliseconds a_Dt, cChunk & a_Chunk)
 {
-	super::InStateChasing(a_Dt);
+	super::InStateChasing(a_Dt, a_Chunk);
 
 	if (m_Target != nullptr)
 	{
-		if (m_Target->IsPlayer())
-		{
-			if (static_cast<cPlayer *>(m_Target)->IsGameModeCreative())
-			{
-				m_EMState = IDLE;
-				return;
-			}
-		}
 		MoveToPosition(m_Target->GetPosition());
 	}
 }
@@ -80,10 +72,9 @@ void cAggressiveMonster::Tick(std::chrono::milliseconds a_Dt, cChunk & a_Chunk)
 	Vector3d AttackDirection(m_Target->GetPosition() + Vector3d(0, m_Target->GetHeight(), 0) - MyHeadPosition);
 
 
-	if (TargetIsInRange() && !LineOfSight.Trace(MyHeadPosition, AttackDirection, static_cast<int>(AttackDirection.Length())))
+	if (TargetIsInRange() && !LineOfSight.Trace(MyHeadPosition, AttackDirection, static_cast<int>(AttackDirection.Length())) && (GetHealth() > 0.0))
 	{
 		// Attack if reached destination, target isn't null, and have a clear line of sight to target (so won't attack through walls)
-		StopMovingToPosition();
 		Attack(a_Dt);
 	}
 }
@@ -92,15 +83,16 @@ void cAggressiveMonster::Tick(std::chrono::milliseconds a_Dt, cChunk & a_Chunk)
 
 
 
-void cAggressiveMonster::Attack(std::chrono::milliseconds a_Dt)
+bool cAggressiveMonster::Attack(std::chrono::milliseconds a_Dt)
 {
-	m_AttackInterval += (static_cast<float>(a_Dt.count()) / 1000) * m_AttackRate;
-	if ((m_Target == nullptr) || (m_AttackInterval < 3.0))
+	if ((m_Target == nullptr) || (m_AttackCoolDownTicksLeft != 0))
 	{
-		return;
+		return false;
 	}
 
 	// Setting this higher gives us more wiggle room for attackrate
-	m_AttackInterval = 0.0;
+	ResetAttackCooldown();
 	m_Target->TakeDamage(dtMobAttack, this, m_AttackDamage, 0);
+
+	return true;
 }

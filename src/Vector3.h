@@ -255,6 +255,11 @@ public:
 		);
 	}
 
+	inline Vector3<T> operator - (void) const
+	{
+		return Vector3<T>(-x, -y, -z);
+	}
+
 	inline Vector3<T> operator * (const Vector3<T>& a_Rhs) const
 	{
 		return Vector3<T>(
@@ -426,7 +431,6 @@ typedef Vector3<int>    Vector3i;
 
 
 
-typedef std::list<Vector3i>   cVector3iList;
 typedef std::vector<Vector3i> cVector3iArray;
 
 

@@ -1163,13 +1163,13 @@ void cProtocol172::SendSoundEffect(const AString & a_SoundName, double a_X, doub
 
 
 
-void cProtocol172::SendSoundParticleEffect(int a_EffectID, int a_SrcX, int a_SrcY, int a_SrcZ, int a_Data)
+void cProtocol172::SendSoundParticleEffect(const EffectID a_EffectID, int a_SrcX, int a_SrcY, int a_SrcZ, int a_Data)
 {
 	ASSERT(m_State == 3);  // In game mode?
 	ASSERT((a_SrcY >= 0) && (a_SrcY < 256));
 	
 	cPacketizer Pkt(*this, 0x28);  // Effect packet
-	Pkt.WriteBEInt32(a_EffectID);
+	Pkt.WriteBEInt32(static_cast<int>(a_EffectID));
 	Pkt.WriteBEInt32(a_SrcX);
 	Pkt.WriteBEUInt8(static_cast<Byte>(a_SrcY));
 	Pkt.WriteBEInt32(a_SrcZ);
@@ -2784,7 +2784,7 @@ void cProtocol172::WriteBlockEntity(cPacketizer & a_Pkt, const cBlockEntity & a_
 			Writer.AddInt("z", MobHeadEntity.GetPosZ());
 			Writer.AddByte("SkullType", MobHeadEntity.GetType() & 0xFF);
 			Writer.AddByte("Rot", MobHeadEntity.GetRotation() & 0xFF);
-			Writer.AddString("ExtraType", MobHeadEntity.GetOwner().c_str());
+			Writer.AddString("ExtraType", MobHeadEntity.GetOwnerName());
 			Writer.AddString("id", "Skull");  // "Tile Entity ID" - MC wiki; vanilla server always seems to send this though
 			break;
 		}
@@ -2985,7 +2985,7 @@ void cProtocol172::WriteMobMetadata(cPacketizer & a_Pkt, const cMonster & a_Mob)
 		case mtCreeper:
 		{
 			a_Pkt.WriteBEUInt8(0x10);
-			a_Pkt.WriteBEUInt8(reinterpret_cast<const cCreeper &>(a_Mob).IsBlowing() ? 1 : 0);
+			a_Pkt.WriteBEUInt8(reinterpret_cast<const cCreeper &>(a_Mob).IsBlowing() ? 1 : 255);
 			a_Pkt.WriteBEUInt8(0x11);
 			a_Pkt.WriteBEUInt8(reinterpret_cast<const cCreeper &>(a_Mob).IsCharged() ? 1 : 0);
 			break;
@@ -3222,11 +3222,11 @@ void cProtocol176::SendPlayerSpawn(const cPlayer & a_Player)
 	const Json::Value & Properties = a_Player.GetClientHandle()->GetProperties();
 	Pkt.WriteVarInt32(Properties.size());
 
-	for (Json::Value::iterator itr = Properties.begin(), end = Properties.end(); itr != end; ++itr)
+	for (auto & Node : Properties)
 	{
-		Pkt.WriteString(itr->get("name", "").asString());
-		Pkt.WriteString(itr->get("value", "").asString());
-		Pkt.WriteString(itr->get("signature", "").asString());
+		Pkt.WriteString(Node.get("name", "").asString());
+		Pkt.WriteString(Node.get("value", "").asString());
+		Pkt.WriteString(Node.get("signature", "").asString());
 	}
 
 	Pkt.WriteFPInt(a_Player.GetPosX());

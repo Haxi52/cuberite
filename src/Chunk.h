@@ -7,7 +7,7 @@
 
 #include "Simulator/FireSimulator.h"
 #include "Simulator/SandSimulator.h"
-#include "Simulator/IncrementalRedstoneSimulator.h"
+#include "Simulator/RedstoneSimulator.h"
 
 #include "Blocks/GetHandlerCompileTimeTemplate.h"
 
@@ -31,6 +31,7 @@ class MTRand;
 class cPlayer;
 class cChunkMap;
 class cBeaconEntity;
+class cBrewingstandEntity;
 class cBoundingBox;
 class cChestEntity;
 class cChunkDataCallback;
@@ -48,12 +49,12 @@ class cBlockArea;
 class cFluidSimulatorData;
 class cMobCensus;
 class cMobSpawner;
-class cRedstonePoweredEntity;
 class cSetChunkData;
 
 typedef std::list<cClientHandle *>         cClientHandleList;
 typedef cItemCallback<cEntity>             cEntityCallback;
 typedef cItemCallback<cBeaconEntity>       cBeaconCallback;
+typedef cItemCallback<cBrewingstandEntity> cBrewingstandCallback;
 typedef cItemCallback<cChestEntity>        cChestCallback;
 typedef cItemCallback<cDispenserEntity>    cDispenserCallback;
 typedef cItemCallback<cFurnaceEntity>      cFurnaceCallback;
@@ -61,7 +62,6 @@ typedef cItemCallback<cNoteEntity>         cNoteBlockCallback;
 typedef cItemCallback<cCommandBlockEntity> cCommandBlockCallback;
 typedef cItemCallback<cMobHeadEntity>      cMobHeadCallback;
 typedef cItemCallback<cFlowerPotEntity>    cFlowerPotCallback;
-typedef cItemCallback<cRedstonePoweredEntity> cRedstonePoweredCallback;
 
 
 
@@ -174,9 +174,6 @@ public:
 	// SetBlock() does a lot of work (heightmap, tickblocks, blockentities) so a BlockIdx version doesn't make sense
 	void SetBlock( const Vector3i & a_RelBlockPos, BLOCKTYPE a_BlockType, NIBBLETYPE a_BlockMeta) { SetBlock( a_RelBlockPos.x, a_RelBlockPos.y, a_RelBlockPos.z, a_BlockType, a_BlockMeta); }
 	
-	/** Queues a block change till the specified world tick */
-	void QueueSetBlock(int a_RelX, int a_RelY, int a_RelZ, BLOCKTYPE a_BlockType, NIBBLETYPE a_BlockMeta, Int64 a_Tick, BLOCKTYPE a_PreviousBlockType = E_BLOCK_AIR);
-	
 	/** Queues block for ticking (m_ToTickQueue) */
 	void QueueTickBlock(int a_RelX, int a_RelY, int a_RelZ);
 	
@@ -256,6 +253,9 @@ public:
 	/** Calls the callback for each block entity; returns true if all block entities processed, false if the callback aborted by returning true */
 	bool ForEachBlockEntity(cBlockEntityCallback & a_Callback);  // Lua-accessible
 
+	/** Calls the callback for each brewingstand; returns true if all brewingstands processed, false if the callback aborted by returning true */
+	bool ForEachBrewingstand(cBrewingstandCallback & a_Callback);  // Lua-accessible
+
 	/** Calls the callback for each chest; returns true if all chests processed, false if the callback aborted by returning true */
 	bool ForEachChest(cChestCallback & a_Callback);  // Lua-accessible
 
@@ -274,10 +274,11 @@ public:
 	/** Calls the callback for the block entity at the specified coords; returns false if there's no block entity at those coords, true if found */
 	bool DoWithBlockEntityAt(int a_BlockX, int a_BlockY, int a_BlockZ, cBlockEntityCallback & a_Callback);  // Lua-acessible
 	
-	/** Calls the callback for the redstone powered entity at the specified coords; returns false if there's no redstone powered entity at those coords, true if found */
-	bool DoWithRedstonePoweredEntityAt(int a_BlockX, int a_BlockY, int a_BlockZ, cRedstonePoweredCallback & a_Callback);
 	/** Calls the callback for the beacon at the specified coords; returns false if there's no beacon at those coords, true if found */
 	bool DoWithBeaconAt(int a_BlockX, int a_BlockY, int a_BlockZ, cBeaconCallback & a_Callback);  // Lua-acessible
+
+	/** Calls the callback for the brewingstand at the specified coords; returns false if there's no brewingstand at those coords, true if found */
+	bool DoWithBrewingstandAt(int a_BlockX, int a_BlockY, int a_BlockZ, cBrewingstandCallback & a_Callback);  // Lua-acessible
 
 	/** Calls the callback for the chest at the specified coords; returns false if there's no chest at those coords, true if found */
 	bool DoWithChestAt(int a_BlockX, int a_BlockY, int a_BlockZ, cChestCallback & a_Callback);  // Lua-acessible
@@ -309,7 +310,9 @@ public:
 	/** Retrieves the test on the sign at the specified coords; returns false if there's no sign at those coords, true if found */
 	bool GetSignLines (int a_BlockX, int a_BlockY, int a_BlockZ, AString & a_Line1, AString & a_Line2, AString & a_Line3, AString & a_Line4);  // Lua-accessible
 
-	void UseBlockEntity(cPlayer * a_Player, int a_X, int a_Y, int a_Z);  // [x, y, z] in world block coords
+	/** Use block entity on coordinate.
+	returns true if the use was successful, return false to use the block as a "normal" block */
+	bool UseBlockEntity(cPlayer * a_Player, int a_X, int a_Y, int a_Z);  // [x, y, z] in world block coords
 
 	void CalculateHeightmap(const BLOCKTYPE * a_BlockTypes);
 
@@ -334,7 +337,7 @@ public:
 	void BroadcastParticleEffect     (const AString & a_ParticleName, float a_SrcX, float a_SrcY, float a_SrcZ, float a_OffsetX, float a_OffsetY, float a_OffsetZ, float a_ParticleData, int a_ParticleAmount, cClientHandle * a_Exclude = nullptr);
 	void BroadcastRemoveEntityEffect (const cEntity & a_Entity, int a_EffectID, const cClientHandle * a_Exclude = nullptr);
 	void BroadcastSoundEffect        (const AString & a_SoundName, double a_X, double a_Y, double a_Z, float a_Volume, float a_Pitch, const cClientHandle * a_Exclude = nullptr);
-	void BroadcastSoundParticleEffect(int a_EffectID, int a_SrcX, int a_SrcY, int a_SrcZ, int a_Data, const cClientHandle * a_Exclude = nullptr);
+	void BroadcastSoundParticleEffect(const EffectID a_EffectID, int a_SrcX, int a_SrcY, int a_SrcZ, int a_Data, const cClientHandle * a_Exclude = nullptr);
 	void BroadcastSpawnEntity        (cEntity & a_Entity, const cClientHandle * a_Exclude = nullptr);
 	void BroadcastThunderbolt        (int a_BlockX, int a_BlockY, int a_BlockZ, const cClientHandle * a_Exclude = nullptr);
 	void BroadcastUseBed             (const cEntity & a_Entity, int a_BlockX, int a_BlockY, int a_BlockZ);
@@ -479,8 +482,6 @@ private:
 	std::vector<Vector3i> m_ToTickBlocks;
 	sSetBlockVector       m_PendingSendBlocks;  ///< Blocks that have changed and need to be sent to all clients
 	
-	sSetBlockQueueVector m_SetBlockQueue;  ///< Block changes that are queued to a specific tick
-	
 	// A critical section is not needed, because all chunk access is protected by its parent ChunkMap's csLayers
 	std::vector<cClientHandle *> m_LoadedByClient;
 	cEntityList                  m_Entities;
@@ -559,9 +560,6 @@ private:
 	
 	/** Called by Tick() when an entity moves out of this chunk into a neighbor; moves the entity and sends spawn / despawn packet to clients */
 	void MoveEntityToNewChunk(cEntity * a_Entity);
-	
-	/** Processes all blocks that have been scheduled for replacement by the QueueSetBlock() function */
-	void ProcessQueuedSetBlocks(void);
 };
 
 typedef cChunk * cChunkPtr;

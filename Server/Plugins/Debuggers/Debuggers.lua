@@ -1459,7 +1459,7 @@ function HandleCompo(a_Split, a_Player)
 	-- Send one composite message to self:
 	local msg = cCompositeChat()
 	msg:AddTextPart("Hello! ", "b@e")  -- bold yellow
-	msg:AddUrlPart("MCServer", "http://mc-server.org")
+	msg:AddUrlPart("Cuberite", "http://cuberite.org")
 	msg:AddTextPart(" rules! ")
 	msg:AddRunCommandPart("Set morning", "/time set 0")
 	a_Player:SendMessage(msg)
@@ -1644,6 +1644,17 @@ function HandlePickups(a_Split, a_Player)
 	end end  -- for z, for x
 	return true
 end
+
+
+
+
+
+function HandlePlugMsg(a_Split, a_Player)
+	local ch = a_Player:GetClientHandle()
+	ch:SendPluginMessage("TestCh", "some\0string\1with\2funny\3chars")
+	return true
+end
+
 
 
 
@@ -1910,6 +1921,34 @@ end
 
 
 
+function HandleConsoleTestJson(a_Split, a_EntireCmd)
+	LOG("Testing Json parsing...")
+	local t1 = cJson:Parse([[{"a": 1, "b": "2", "c": [3, "4", 5] }]])
+	assert(t1.a == 1)
+	assert(t1.b == "2")
+	assert(t1.c[1] == 3)
+	assert(t1.c[2] == "4")
+	assert(t1.c[3] == 5)
+	
+	local t2, msg = cJson:Parse([[{"some": invalid, json}]])
+	assert(t2 == nil)
+	assert(type(msg) == "string")
+	LOG("Error message returned: " .. msg)
+	
+	LOG("Json parsing test succeeded")
+	
+	LOG("Testing Json serializing...")
+	local s1 = cJson:Serialize({a = 1, b = "2", c = {3, "4", 5}}, {indentation = " "})
+	LOG("Serialization result: " .. (s1 or "<nil>"))
+	LOG("Json serializing test succeeded")
+	
+	return true
+end
+
+
+
+
+
 function HandleConsoleTestTracer(a_Split, a_EntireCmd)
 	-- Check required params:
 	if not(a_Split[7]) then
@@ -1984,6 +2023,78 @@ function HandleConsoleTestTracer(a_Split, a_EntireCmd)
 			cLineBlockTracer:Trace(World, Callbacks, Coords[1], Coords[2], Coords[3], Coords[4], Coords[5], Coords[6])
 		end
 	)
+	return true
+end
+
+
+
+
+
+function HandleConsoleTestUrlParser(a_Split, a_EntireCmd)
+	LOG("Testing cUrlParser...")
+	local UrlsToTest =
+	{
+		"invalid URL",
+		"https://github.com",
+		"ftp://anonymous:user@example.com@ftp.cuberite.org:9921/releases/2015/2015-12-25.zip",
+		"ftp://anonymous:user:name:with:colons@example.com@ftp.cuberite.org:9921",
+		"http://google.com/",
+		"http://google.com/?q=cuberite",
+		"http://google.com/search?q=cuberite",
+		"http://google.com/some/search?q=cuberite#results",
+		"http://google.com/?q=cuberite#results",
+		"http://google.com/#results",
+		"ftp://cuberite.org:9921/releases/2015/2015-12-25.zip",
+		"mailto:support@cuberite.org",
+	}
+	for _, u in ipairs(UrlsToTest) do
+		LOG("URL: " .. u)
+		local scheme, username, password, host, port, path, query, fragment = cUrlParser:Parse(u)
+		if not(scheme) then
+			LOG("  Error: " .. (username or "<nil>"))
+		else
+			LOG("  Scheme   = " .. scheme)
+			LOG("  Username = " .. username)
+			LOG("  Password = " .. password)
+			LOG("  Host     = " .. host)
+			LOG("  Port     = " .. port)
+			LOG("  Path     = " .. path)
+			LOG("  Query    = " .. query)
+			LOG("  Fragment = " .. fragment)
+		end
+	end
+	LOG("cUrlParser test complete")
+	return true
+end
+
+
+
+
+
+function HandleConsoleUuid(a_Split, a_EntireCmd)
+	-- Check params:
+	local playerName = a_Split[2]
+	if not(playerName) then
+		return true, "Usage: uuid <PlayerName>"
+	end
+	
+	-- Query with cache:
+	LOG("Player " .. playerName .. ":")
+	local cachedUuid = cMojangAPI:GetUUIDFromPlayerName(playerName, true)
+	if not(cachedUuid) then
+		LOG("  - not in the UUID cache")
+	else
+		LOG("  - in the cache: \"" .. cachedUuid .. "\"")
+	end
+	
+	-- Query online:
+	local onlineUuid = cMojangAPI:GetUUIDFromPlayerName(playerName, false)
+	if not(onlineUuid) then
+		LOG("  - UUID not available online")
+	else
+		LOG("  - online: \"" .. onlineUuid .. "\"")
+	end
+	
 	return true
 end
 

@@ -91,11 +91,7 @@ bool cParsedNBT::ReadString(size_t & a_StringStart, size_t & a_StringLen)
 	NEEDBYTES(2);
 	a_StringStart = m_Pos + 2;
 	a_StringLen = static_cast<size_t>(GetBEShort(m_Data + m_Pos));
-	if (a_StringLen > 0xffff)
-	{
-		// Suspicious string length
-		return false;
-	}
+	NEEDBYTES(2 + a_StringLen);
 	m_Pos += 2 + a_StringLen;
 	return true;
 }
@@ -114,7 +110,12 @@ bool cParsedNBT::ReadCompound(void)
 	for (;;)
 	{
 		NEEDBYTES(1);
-		eTagType TagType = static_cast<eTagType>(m_Data[m_Pos]);
+		const char TagTypeNum = m_Data[m_Pos];
+		if ((TagTypeNum < TAG_Min) || (TagTypeNum > TAG_Max))
+		{
+			return false;
+		}
+		eTagType TagType = static_cast<eTagType>(TagTypeNum);
 		m_Pos++;
 		if (TagType == TAG_End)
 		{
@@ -262,7 +263,6 @@ bool cParsedNBT::ReadTag(void)
 		#endif
 		case TAG_Min:
 		{
-			ASSERT(!"Unhandled NBT tag type");
 			return false;
 		}
 	}  // switch (iType)

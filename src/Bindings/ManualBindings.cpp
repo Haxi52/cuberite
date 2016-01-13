@@ -20,6 +20,7 @@
 #include "../ClientHandle.h"
 #include "../BlockArea.h"
 #include "../BlockEntities/BeaconEntity.h"
+#include "../BlockEntities/BrewingstandEntity.h"
 #include "../BlockEntities/ChestEntity.h"
 #include "../BlockEntities/CommandBlockEntity.h"
 #include "../BlockEntities/DispenserEntity.h"
@@ -35,6 +36,7 @@
 #include "../StringCompression.h"
 #include "../CommandOutput.h"
 #include "../BuildInfo.h"
+#include "../HTTPServer/UrlParser.h"
 
 
 
@@ -1955,6 +1957,155 @@ static int tolua_get_HTTPRequest_FormData(lua_State* tolua_S)
 
 
 
+static int tolua_cUrlParser_GetDefaultPort(lua_State * a_LuaState)
+{
+	// API function signature:
+	// cUrlParser:GetDefaultPort("scheme") -> number
+
+	// Check params:
+	cLuaState L(a_LuaState);
+	if (
+		!L.CheckParamUserTable(1, "cUrlParser") ||
+		!L.CheckParamString(2) ||
+		!L.CheckParamEnd(3)
+	)
+	{
+		return 0;
+	}
+
+	// Read params from Lua:
+	AString scheme;
+	L.GetStackValue(2, scheme);
+
+	// Execute and push result:
+	L.Push(cUrlParser::GetDefaultPort(scheme));
+	return 1;
+}
+
+
+
+
+
+static int tolua_cUrlParser_IsKnownScheme(lua_State * a_LuaState)
+{
+	// API function signature:
+	// cUrlParser:IsKnownScheme("scheme") -> bool
+
+	// Check params:
+	cLuaState L(a_LuaState);
+	if (
+		!L.CheckParamUserTable(1, "cUrlParser") ||
+		!L.CheckParamString(2) ||
+		!L.CheckParamEnd(3)
+	)
+	{
+		return 0;
+	}
+
+	// Read params from Lua:
+	AString scheme;
+	L.GetStackValue(2, scheme);
+
+	// Execute and push result:
+	L.Push(cUrlParser::IsKnownScheme(scheme));
+	return 1;
+}
+
+
+
+
+
+static int tolua_cUrlParser_Parse(lua_State * a_LuaState)
+{
+	// API function signature:
+	// cUrlParser:Parse("url") -> "scheme", "user", "password", "host", portnum, "path", "query", "fragment"
+	// On error, returns nil and error message
+
+	// Check params:
+	cLuaState L(a_LuaState);
+	if (
+		!L.CheckParamUserTable(1, "cUrlParser") ||
+		!L.CheckParamString(2) ||
+		!L.CheckParamEnd(3)
+	)
+	{
+		return 0;
+	}
+
+	// Read params from Lua:
+	AString url;
+	L.GetStackValue(2, url);
+
+	// Execute and push result:
+	AString scheme, username, password, host, path, query, fragment;
+	UInt16 port;
+	auto res = cUrlParser::Parse(url, scheme, username, password, host, port, path, query, fragment);
+	if (!res.first)
+	{
+		// Error, return nil and error msg:
+		L.PushNil();
+		L.Push(res.second);
+		return 2;
+	}
+	L.Push(scheme);
+	L.Push(username);
+	L.Push(password);
+	L.Push(host);
+	L.Push(port);
+	L.Push(path);
+	L.Push(query);
+	L.Push(fragment);
+	return 8;
+}
+
+
+
+
+
+static int tolua_cUrlParser_ParseAuthorityPart(lua_State * a_LuaState)
+{
+	// API function signature:
+	// cUrlParser:ParseAuthorityPart("authority") -> "user", "password", "host", portnum
+	// On error, returns nil and error message
+	// Parts not specified in the "authority" are left empty / zero
+
+	// Check params:
+	cLuaState L(a_LuaState);
+	if (
+		!L.CheckParamUserTable(1, "cUrlParser") ||
+		!L.CheckParamString(2) ||
+		!L.CheckParamEnd(3)
+	)
+	{
+		return 0;
+	}
+
+	// Read params from Lua:
+	AString authPart;
+	L.GetStackValue(2, authPart);
+
+	// Execute and push result:
+	AString username, password, host;
+	UInt16 port;
+	auto res = cUrlParser::ParseAuthorityPart(authPart, username, password, host, port);
+	if (!res.first)
+	{
+		// Error, return nil and error msg:
+		L.PushNil();
+		L.Push(res.second);
+		return 2;
+	}
+	L.Push(username);
+	L.Push(password);
+	L.Push(host);
+	L.Push(port);
+	return 4;
+}
+
+
+
+
+
 static int tolua_cWebAdmin_GetPlugins(lua_State * tolua_S)
 {
 	cWebAdmin * self = reinterpret_cast<cWebAdmin *>(tolua_tousertype(tolua_S, 1, nullptr));
@@ -2509,6 +2660,54 @@ static int tolua_cRoot_GetBuildSeriesName(lua_State * tolua_S)
 {
 	cLuaState L(tolua_S);
 	L.Push(BUILD_SERIES_NAME);
+	return 1;
+}
+
+
+
+
+
+static int tolua_cRoot_GetBrewingRecipe(lua_State * tolua_S)
+{
+	cLuaState L(tolua_S);
+	if (
+		!L.CheckParamUserTable(1, "cRoot") ||
+		!L.CheckParamUserType (2, "const cItem") ||
+		!L.CheckParamUserType (3, "const cItem") ||
+		!L.CheckParamEnd      (4)
+	)
+	{
+		return 0;
+	}
+
+	// Check the bottle param:
+	cItem * Bottle = nullptr;
+	L.GetStackValue(2, Bottle);
+	if (Bottle == nullptr)
+	{
+		LOGWARNING("cRoot:GetBrewingRecipe: the Bottle parameter is nil or missing.");
+		return 0;
+	}
+
+	cItem * Ingredient = nullptr;
+	L.GetStackValue(3, Ingredient);
+	if (Ingredient == nullptr)
+	{
+		LOGWARNING("cRoot:GetBrewingRecipe: the Ingredient parameter is nil or missing.");
+		return 0;
+	}
+
+	// Get the recipe for the input
+	cBrewingRecipes * BR = cRoot::Get()->GetBrewingRecipes();
+	const cBrewingRecipes::cRecipe * Recipe = BR->GetRecipeFrom(*Bottle, *Ingredient);
+	if (Recipe == nullptr)
+	{
+		// There is no such brewing recipe for this bottle and ingredient, return no value
+		return 0;
+	}
+
+	// Push the output item
+	L.Push(Recipe->Output.get());
 	return 1;
 }
 
@@ -3175,9 +3374,11 @@ void cManualBindings::Bind(lua_State * tolua_S)
 		tolua_usertype(tolua_S, "cCryptoHash");
 		tolua_usertype(tolua_S, "cLineBlockTracer");
 		tolua_usertype(tolua_S, "cStringCompression");
+		tolua_usertype(tolua_S, "cUrlParser");
 		tolua_cclass(tolua_S, "cCryptoHash",        "cCryptoHash",        "", nullptr);
 		tolua_cclass(tolua_S, "cLineBlockTracer",   "cLineBlockTracer",   "", nullptr);
 		tolua_cclass(tolua_S, "cStringCompression", "cStringCompression", "", nullptr);
+		tolua_cclass(tolua_S, "cUrlParser",         "cUrlParser",         "", nullptr);
 
 		// Globals:
 		tolua_function(tolua_S, "Clamp",                 tolua_Clamp);
@@ -3320,6 +3521,7 @@ void cManualBindings::Bind(lua_State * tolua_S)
 			tolua_function(tolua_S, "DoWithPlayerByUUID",  DoWith <cRoot, cPlayer, &cRoot::DoWithPlayerByUUID>);
 			tolua_function(tolua_S, "ForEachPlayer",       ForEach<cRoot, cPlayer, &cRoot::ForEachPlayer>);
 			tolua_function(tolua_S, "ForEachWorld",        ForEach<cRoot, cWorld,  &cRoot::ForEachWorld>);
+			tolua_function(tolua_S, "GetBrewingRecipe",    tolua_cRoot_GetBrewingRecipe);
 			tolua_function(tolua_S, "GetBuildCommitID",    tolua_cRoot_GetBuildCommitID);
 			tolua_function(tolua_S, "GetBuildDateTime",    tolua_cRoot_GetBuildDateTime);
 			tolua_function(tolua_S, "GetBuildID",          tolua_cRoot_GetBuildID);
@@ -3338,6 +3540,13 @@ void cManualBindings::Bind(lua_State * tolua_S)
 			tolua_function(tolua_S, "CompressStringGZIP",     tolua_CompressStringGZIP);
 			tolua_function(tolua_S, "UncompressStringGZIP",   tolua_UncompressStringGZIP);
 			tolua_function(tolua_S, "InflateString",          tolua_InflateString);
+		tolua_endmodule(tolua_S);
+
+		tolua_beginmodule(tolua_S, "cUrlParser");
+			tolua_function(tolua_S, "GetDefaultPort",     tolua_cUrlParser_GetDefaultPort);
+			tolua_function(tolua_S, "IsKnownScheme",      tolua_cUrlParser_IsKnownScheme);
+			tolua_function(tolua_S, "Parse",              tolua_cUrlParser_Parse);
+			tolua_function(tolua_S, "ParseAuthorityPart", tolua_cUrlParser_ParseAuthorityPart);
 		tolua_endmodule(tolua_S);
 
 		tolua_beginmodule(tolua_S, "cWebAdmin");
